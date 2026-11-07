@@ -35,6 +35,14 @@ const loginError = document.getElementById('login-error');
 const loginButton = document.getElementById('login-btn');
 const logoutButton = document.getElementById('admin-logout-btn');
 
+function clearAdminLoginFields() {
+    const emailField = document.getElementById('admin-email');
+    const passwordField = document.getElementById('admin-password');
+    if (emailField) emailField.value = '';
+    if (passwordField) passwordField.value = '';
+    if (loginForm) loginForm.reset();
+}
+
 function showAdminDashboard(isSignedIn) {
     if (!loginSection || !dashboard) return;
     loginSection.style.display = isSignedIn ? 'none' : '';
@@ -52,6 +60,11 @@ if (loginForm && typeof supabaseClient !== 'undefined') {
             return;
         }
         showAdminDashboard(Boolean(data.session));
+        if (!data.session) {
+            clearAdminLoginFields();
+            // Some browsers apply saved autofill shortly after page load.
+            window.setTimeout(clearAdminLoginFields, 300);
+        }
     })();
 
     // Keep the page in sync when the user signs in or signs out.
@@ -73,6 +86,7 @@ if (loginForm && typeof supabaseClient !== 'undefined') {
             if (error) {
                 console.error('Supabase Login Error:', error);
                 loginError.textContent = error.message;
+                document.getElementById('admin-password').value = '';
                 return;
             }
             showAdminDashboard(Boolean(data.session));
@@ -97,7 +111,7 @@ if (loginForm && typeof supabaseClient !== 'undefined') {
                     return;
                 }
                 showAdminDashboard(false);
-                loginForm.reset();
+                clearAdminLoginFields();
                 if (loginError) loginError.textContent = '';
             } catch (err) {
                 console.error('Unexpected logout error:', err);
