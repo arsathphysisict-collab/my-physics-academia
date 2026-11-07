@@ -14,7 +14,33 @@
 <!-- GTM noscript placeholder: paste the real GTM <noscript> iframe snippet right after <body> when ready. -->
 <header><div class="wrap nav"><a class="brand" href="index.html"><img src="images/logo.svg" alt="My Physics Academia logo">MY PHYSICS ACADEMIA</a>
 <button id="burger" aria-label="Open menu">☰</button><nav class="links" aria-label="Main"><a href="index.html">Home</a><a href="courses.html">Courses</a><a href="resources.html">Free Resources</a><a href="blog.html">Blog</a><a href="about.html">About</a><a href="contact.html">Contact</a><a class="btn" id="nav-enroll" data-track="enroll_now_click" data-label="nav" data-modal="Demo: enrolment is not live in this prototype." href="#">Enroll Now</a></nav></div></header>
-<main><section id="login"><div class="wrap"><form class="card login"><h2>Admin Login</h2><span class="demo">Demo only</span><label>Email<input placeholder="admin@example.com"></label><label>Password<input type="password" placeholder="••••••••"></label><button class="btn" id="login-btn">Login</button></form></div></section>
+<main><section id="login"><div class="wrap"><form class="card login" id="admin-login-form">
+    <h2>Admin Login</h2>
+
+    <label>Email
+        <input
+            type="email"
+            id="admin-email"
+            placeholder="Enter your email"
+            required
+        >
+    </label>
+
+    <label>Password
+        <input
+            type="password"
+            id="admin-password"
+            placeholder="Enter your password"
+            required
+        >
+    </label>
+
+    <p id="login-error" style="color:red;"></p>
+
+    <button type="submit" class="btn" id="login-btn">
+        Login
+    </button>
+</form></div></section>
 <section id="dash" class="dash"><div class="wrap"><h1>Dashboard</h1><div class="g" style="margin-top:20px"><div class="card"><div class="meta"><span>Total Courses</span></div><div class="price">2</div></div><div class="card"><div class="meta"><span>Total Lessons</span></div><div class="price">28</div></div><div class="card"><div class="meta"><span>Total Students (sample)</span></div><div class="price">1,240</div></div></div>
 <div class="row"><button class="btn" id="add-course" data-demo="Demo: Add course form not implemented.">Add New Course</button><button class="btn o" id="upload-video" onclick="document.querySelector('[data-pane=up]').click()">Upload Video</button></div>
 <div class="tabs"><button class="on" data-pane="mc">Manage Courses</button><button data-pane="ml">Manage Lessons</button><button data-pane="up">Upload Interface</button><button data-pane="ra">Recent Activity</button></div>
