@@ -84,8 +84,10 @@ if (loginForm && typeof supabaseClient !== 'undefined') {
         try {
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) {
-                console.error('Supabase Login Error:', error);
-                loginError.textContent = error.message;
+                // Use the same message for every authentication failure.
+                // Do not reveal whether the email or password was incorrect.
+                console.error('Supabase authentication failed.');
+                loginError.textContent = 'Invalid email or password. Please try again.';
                 document.getElementById('admin-password').value = '';
                 return;
             }
