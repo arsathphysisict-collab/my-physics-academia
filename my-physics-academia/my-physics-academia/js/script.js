@@ -88,7 +88,7 @@ if (loginForm && typeof supabaseClient !== 'undefined') {
                 // Do not reveal whether the email or password was incorrect.
                 console.error('Supabase authentication failed.');
                 loginError.textContent = 'Invalid email or password. Please try again.';
-                document.getElementById('admin-password').value = '';
+                // Keep both fields unchanged so the user can review and edit them.
                 return;
             }
             showAdminDashboard(Boolean(data.session));
