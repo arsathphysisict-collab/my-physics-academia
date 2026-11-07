@@ -47,6 +47,69 @@ function showAdminDashboard(isSignedIn) {
     if (!loginSection || !dashboard) return;
     loginSection.style.display = isSignedIn ? 'none' : '';
     dashboard.classList.toggle('show', isSignedIn);
+    if (isSignedIn) loadAdminDashboardData();
+}
+
+async function loadAdminDashboardData() {
+    if (typeof supabaseClient === 'undefined') return;
+
+    const coursesBody = document.getElementById('admin-courses-list');
+    const lessonsBody = document.getElementById('admin-lessons-list');
+    const coursesCount = document.getElementById('total-courses');
+    const lessonsCount = document.getElementById('total-lessons');
+
+    try {
+        const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+        if (authError || !authData.user) throw new Error('Please sign in again.');
+
+        // Confirm this signed-in account is present in the admin allowlist.
+        const { data: adminRecord, error: adminError } = await supabaseClient
+            .from('admin_users')
+            .select('user_id')
+            .eq('user_id', authData.user.id)
+            .maybeSingle();
+
+        if (adminError) throw new Error('Could not verify admin permission. Check Supabase policies.');
+        if (!adminRecord) throw new Error('This account is not registered as an admin.');
+
+        const [
+            { data: courses, error: coursesError, count: courseCount },
+            { data: lessons, error: lessonsError, count: lessonCount }
+        ] = await Promise.all([
+            supabaseClient.from('courses').select('id,title,class_level,is_published', { count: 'exact' }).order('created_at', { ascending: false }),
+            supabaseClient.from('lessons').select('id,title,course_id,is_published,sort_order', { count: 'exact' }).order('sort_order', { ascending: true })
+        ]);
+
+        if (coursesError) throw coursesError;
+        if (lessonsError) throw lessonsError;
+
+        if (coursesCount) coursesCount.textContent = courseCount ?? courses.length;
+        if (lessonsCount) lessonsCount.textContent = lessonCount ?? lessons.length;
+
+        const courseNames = new Map((courses || []).map(course => [course.id, course.title]));
+        if (coursesBody) {
+            coursesBody.innerHTML = courses && courses.length
+                ? courses.map(course => `<tr><td>${escapeAdminText(course.title)}</td><td>Class ${course.class_level}</td><td>${course.is_published ? 'Published' : 'Draft'}</td></tr>`).join('')
+                : '<tr><td colspan="3">No courses yet. Add your first course next.</td></tr>';
+        }
+
+        if (lessonsBody) {
+            lessonsBody.innerHTML = lessons && lessons.length
+                ? lessons.map(lesson => `<tr><td>${escapeAdminText(lesson.title)}</td><td>${escapeAdminText(courseNames.get(lesson.course_id) || 'Course unavailable')}</td><td>${lesson.is_published ? 'Published' : 'Draft'}</td></tr>`).join('')
+                : '<tr><td colspan="3">No lessons yet. Lessons will appear here after you add them.</td></tr>';
+        }
+    } catch (error) {
+        console.error('Admin dashboard data load failed:', error);
+        if (coursesBody) coursesBody.innerHTML = '<tr><td colspan="3">Could not load courses. Please refresh.</td></tr>';
+        if (lessonsBody) lessonsBody.innerHTML = '<tr><td colspan="3">Could not load lessons. Please refresh.</td></tr>';
+        toast(error.message || 'Could not load admin data.');
+    }
+}
+
+function escapeAdminText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
 }
 
 if (loginForm && typeof supabaseClient !== 'undefined') {
