@@ -27,41 +27,90 @@ if($('#course-detail')){const n=new URLSearchParams(location.search).get('class'
 let cur=0;function sel(i){const all=$$('.rel a');if(!all.length)return;cur=(i+all.length)%all.length;all.forEach(x=>x.classList.remove('on'));const a=all[cur];a.classList.add('on');$('#l-title').textContent=a.dataset.t;$('#l-desc').textContent=a.dataset.d;$('#l-ch').textContent=a.dataset.c}
 $$('.rel a').forEach((a,i)=>a.onclick=e=>{e.preventDefault();sel(i)});
 $('#prev')&&($('#prev').onclick=()=>sel(cur-1));$('#next')&&($('#next').onclick=()=>sel(cur+1));
+// Supabase admin-page session handling
 const loginForm = document.getElementById('admin-login-form');
+const loginSection = document.getElementById('login');
+const dashboard = document.getElementById('dash');
+const loginError = document.getElementById('login-error');
+const loginButton = document.getElementById('login-btn');
+const logoutButton = document.getElementById('admin-logout-btn');
 
-if (loginForm) {
+function showAdminDashboard(isSignedIn) {
+    if (!loginSection || !dashboard) return;
+    loginSection.style.display = isSignedIn ? 'none' : '';
+    dashboard.classList.toggle('show', isSignedIn);
+}
+
+if (loginForm && typeof supabaseClient !== 'undefined') {
+    // Check the saved Supabase session whenever this page opens or refreshes.
+    (async () => {
+        const { data, error } = await supabaseClient.auth.getSession();
+        if (error) {
+            console.error('Could not restore Supabase session:', error);
+            showAdminDashboard(false);
+            if (loginError) loginError.textContent = 'Could not check login session. Please try again.';
+            return;
+        }
+        showAdminDashboard(Boolean(data.session));
+    })();
+
+    // Keep the page in sync when the user signs in or signs out.
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+        showAdminDashboard(Boolean(session));
+    });
+
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-
-        const email = document.getElementById('admin-email').value;
+        const email = document.getElementById('admin-email').value.trim();
         const password = document.getElementById('admin-password').value;
-        const error = document.getElementById('login-error');
-        const button = document.getElementById('login-btn');
 
-        error.textContent = '';
-        button.disabled = true;
-        button.textContent = 'Logging in...';
+        loginError.textContent = '';
+        loginButton.disabled = true;
+        loginButton.textContent = 'Logging in...';
 
-        const { data, error: loginError } =
-            await supabaseClient.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
-
-        button.disabled = false;
-        button.textContent = 'Login';
-
-        if (loginError) {
-    console.error("Supabase Login Error:", loginError);
-
-    error.textContent = loginError.message;
-    return;
-}
-        if (data.user) {
-            document.getElementById('login').style.display = 'none';
-            document.getElementById('dash').classList.add('show');
+        try {
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                console.error('Supabase Login Error:', error);
+                loginError.textContent = error.message;
+                return;
+            }
+            showAdminDashboard(Boolean(data.session));
+        } catch (err) {
+            console.error('Unexpected login error:', err);
+            loginError.textContent = 'Unable to log in. Please check your connection and try again.';
+        } finally {
+            loginButton.disabled = false;
+            loginButton.textContent = 'Login';
         }
     });
+
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async () => {
+            logoutButton.disabled = true;
+            logoutButton.textContent = 'Logging out...';
+            try {
+                const { error } = await supabaseClient.auth.signOut();
+                if (error) {
+                    console.error('Supabase Logout Error:', error);
+                    toast('Logout failed. Please try again.');
+                    return;
+                }
+                showAdminDashboard(false);
+                loginForm.reset();
+                if (loginError) loginError.textContent = '';
+            } catch (err) {
+                console.error('Unexpected logout error:', err);
+                toast('Unable to log out. Please try again.');
+            } finally {
+                logoutButton.disabled = false;
+                logoutButton.textContent = 'Logout';
+            }
+        });
+    }
+} else if (loginForm) {
+    showAdminDashboard(false);
+    if (loginError) loginError.textContent = 'Authentication service is not available. Please refresh the page.';
 }
 $$('.tabs button').forEach(b=>b.onclick=()=>{$$('.tabs button').forEach(x=>x.classList.remove('on'));$$('.pane').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#'+b.dataset.pane).classList.add('on')});
 $$('.drop').forEach(dz=>{['dragover','dragenter'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.add('hot')}));['dragleave','drop'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.remove('hot');if(v==='drop')toast('Demo only: file not uploaded')}))});
