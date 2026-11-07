@@ -93,6 +93,21 @@ async function loadAdminDashboardData() {
         if (lessonsCount) lessonsCount.textContent = lessonCount ?? lessons.length;
 
         const courseNames = new Map((courses || []).map(course => [course.id, course.title]));
+        const uploadLessonSelect = document.getElementById('upload-lesson-select');
+        if (uploadLessonSelect) {
+            const previousLessonId = uploadLessonSelect.value;
+            uploadLessonSelect.innerHTML = lessons && lessons.length
+                ? '<option value="">Select a lesson</option>' + lessons.map(lesson => {
+                    const courseName = courseNames.get(lesson.course_id) || 'Course';
+                    const videoState = lesson.mux_status ? ' — ' + lesson.mux_status : '';
+                    return `<option value="${escapeAdminText(lesson.id)}">${escapeAdminText(courseName)} / ${escapeAdminText(lesson.title)}${escapeAdminText(videoState)}</option>`;
+                  }).join('')
+                : '<option value="">Create a lesson first</option>';
+            if (previousLessonId && (lessons || []).some(lesson => lesson.id === previousLessonId)) {
+                uploadLessonSelect.value = previousLessonId;
+            }
+        }
+
         const lessonCourseSelect = document.getElementById('new-lesson-course');
         if (lessonCourseSelect) {
             const previousCourseId = lessonCourseSelect.value;
@@ -342,10 +357,105 @@ if (addLessonForm) {
     });
 }
 
-$('.tabs button').forEach(b=>b.onclick=()=>{$$('.tabs button').forEach(x=>x.classList.remove('on'));$$('.pane').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#'+b.dataset.pane).classList.add('on')});
+
+const uploadVideoForm = document.getElementById('upload-video-form');
+if (uploadVideoForm) {
+    uploadVideoForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const errorBox = document.getElementById('upload-video-error');
+        const lessonId = document.getElementById('upload-lesson-select').value;
+        const file = document.getElementById('lesson-video-file').files[0];
+        const button = document.getElementById('start-video-upload');
+        const progressWrap = document.getElementById('upload-progress-wrap');
+        const progress = document.getElementById('upload-progress');
+        const percent = document.getElementById('upload-percent');
+        const status = document.getElementById('upload-status');
+        errorBox.textContent = '';
+
+        if (!lessonId || !file) {
+            errorBox.textContent = 'Please select a lesson and choose a video file.';
+            return;
+        }
+        if (!file.type.startsWith('video/')) {
+            errorBox.textContent = 'Please choose a valid video file.';
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Preparing...';
+        progressWrap.style.display = 'block';
+        progress.value = 0;
+        percent.textContent = '0%';
+        status.textContent = 'Checking admin session...';
+
+        try {
+            const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+            if (authError || !authData.user) throw new Error('Your login session has expired. Please log in again.');
+            const { data: adminRecord, error: adminError } = await supabaseClient
+                .from('admin_users').select('user_id').eq('user_id', authData.user.id).maybeSingle();
+            if (adminError || !adminRecord) throw new Error('Admin permission could not be verified.');
+
+            status.textContent = 'Creating secure upload link...';
+            const { data: uploadData, error: functionError } = await supabaseClient.functions.invoke('create-mux-upload', { body: {} });
+            if (functionError) throw new Error(functionError.message || 'Could not create Mux upload link.');
+            if (!uploadData || !uploadData.uploadUrl || !uploadData.uploadId) {
+                throw new Error(uploadData?.error || 'Mux did not return a valid upload link.');
+            }
+
+            const { error: saveError } = await supabaseClient.from('lessons').update({
+                mux_upload_id: uploadData.uploadId,
+                mux_status: 'uploading'
+            }).eq('id', lessonId);
+            if (saveError) throw new Error('Could not save upload details to the lesson: ' + saveError.message);
+
+            status.textContent = 'Uploading video to Mux...';
+            button.textContent = 'Uploading...';
+            await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', uploadData.uploadUrl, true);
+                xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const value = Math.round((e.loaded / e.total) * 100);
+                        progress.value = value;
+                        percent.textContent = value + '%';
+                    }
+                };
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) resolve();
+                    else reject(new Error('Mux upload failed (HTTP ' + xhr.status + '). Please try again.'));
+                };
+                xhr.onerror = () => reject(new Error('Network error while uploading. Check your connection and try again.'));
+                xhr.onabort = () => reject(new Error('Upload was cancelled.'));
+                xhr.send(file);
+            });
+
+            const { error: finishError } = await supabaseClient.from('lessons').update({
+                mux_status: 'processing'
+            }).eq('id', lessonId);
+            if (finishError) throw new Error('Video uploaded, but lesson status could not be updated. Refresh the dashboard.');
+            progress.value = 100;
+            percent.textContent = '100%';
+            status.textContent = 'Upload complete. Mux is processing the video now.';
+            toast('Video uploaded! Mux is processing it.');
+            document.getElementById('lesson-video-file').value = '';
+            await loadAdminDashboardData();
+        } catch (error) {
+            console.error('Mux video upload failed:', error);
+            errorBox.textContent = error.message || 'Video upload failed. Please try again.';
+            status.textContent = 'Upload not completed.';
+            toast('Video upload failed.');
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Upload Video';
+        }
+    });
+}
+
+$('.tabs button').forEach(b=>b.onclick=()=>{$('.tabs button').forEach(x=>x.classList.remove('on'));$('.pane').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#'+b.dataset.pane).classList.add('on')});
 $$('.drop').forEach(dz=>{['dragover','dragenter'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.add('hot')}));['dragleave','drop'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.remove('hot');if(v==='drop')toast('Demo only: file not uploaded')}))});
 $$('form').forEach(f => {
-    if (f.id !== 'admin-login-form' && f.id !== 'add-course-form') {
+    if (!['admin-login-form', 'add-course-form', 'add-lesson-form', 'upload-video-form'].includes(f.id)) {
         f.onsubmit = e => {
             e.preventDefault();
             toast('Demo only: nothing was submitted');
