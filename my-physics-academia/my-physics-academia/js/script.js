@@ -34,6 +34,12 @@ const dashboard = document.getElementById('dash');
 const loginError = document.getElementById('login-error');
 const loginButton = document.getElementById('login-btn');
 const logoutButton = document.getElementById('admin-logout-btn');
+const addCoursePanel = document.getElementById('add-course-panel');
+const addCourseButton = document.getElementById('add-course');
+const addCourseForm = document.getElementById('add-course-form');
+const cancelCourseButton = document.getElementById('cancel-course-btn');
+const saveCourseButton = document.getElementById('save-course-btn');
+
 
 function clearAdminLoginFields() {
     const emailField = document.getElementById('admin-email');
@@ -191,10 +197,71 @@ if (loginForm && typeof supabaseClient !== 'undefined') {
     showAdminDashboard(false);
     if (loginError) loginError.textContent = 'Authentication service is not available. Please refresh the page.';
 }
-$$('.tabs button').forEach(b=>b.onclick=()=>{$$('.tabs button').forEach(x=>x.classList.remove('on'));$$('.pane').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#'+b.dataset.pane).classList.add('on')});
+
+if (addCourseButton && addCoursePanel) {
+    addCourseButton.addEventListener('click', () => {
+        addCoursePanel.style.display = 'block';
+        document.getElementById('new-course-title').focus();
+        addCoursePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+if (cancelCourseButton && addCoursePanel && addCourseForm) {
+    cancelCourseButton.addEventListener('click', () => {
+        addCourseForm.reset();
+        document.getElementById('add-course-error').textContent = '';
+        addCoursePanel.style.display = 'none';
+    });
+}
+if (addCourseForm) {
+    addCourseForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const errorBox = document.getElementById('add-course-error');
+        const title = document.getElementById('new-course-title').value.trim();
+        const classLevel = Number(document.getElementById('new-course-class').value);
+        const description = document.getElementById('new-course-description').value.trim();
+        const isPublished = document.getElementById('new-course-published').checked;
+        errorBox.textContent = '';
+
+        if (!title || ![11, 12].includes(classLevel)) {
+            errorBox.textContent = 'Please enter a course title and select Class 11 or Class 12.';
+            return;
+        }
+        saveCourseButton.disabled = true;
+        saveCourseButton.textContent = 'Saving...';
+        try {
+            const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+            if (authError || !authData.user) throw new Error('Your login session has expired. Please log in again.');
+
+            const { data: adminRecord, error: adminError } = await supabaseClient
+                .from('admin_users').select('user_id').eq('user_id', authData.user.id).maybeSingle();
+            if (adminError || !adminRecord) throw new Error('Admin permission could not be verified.');
+
+            const { error } = await supabaseClient.from('courses').insert([{
+                title,
+                class_level: classLevel,
+                description: description || null,
+                is_published: isPublished
+            }]);
+            if (error) throw error;
+
+            addCourseForm.reset();
+            addCoursePanel.style.display = 'none';
+            toast('Course saved successfully!');
+            await loadAdminDashboardData();
+        } catch (error) {
+            console.error('Course save failed:', error);
+            errorBox.textContent = error.message || 'Could not save the course. Please try again.';
+        } finally {
+            saveCourseButton.disabled = false;
+            saveCourseButton.textContent = 'Save Course';
+        }
+    });
+}
+
+$('.tabs button').forEach(b=>b.onclick=()=>{$$('.tabs button').forEach(x=>x.classList.remove('on'));$$('.pane').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#'+b.dataset.pane).classList.add('on')});
 $$('.drop').forEach(dz=>{['dragover','dragenter'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.add('hot')}));['dragleave','drop'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.remove('hot');if(v==='drop')toast('Demo only: file not uploaded')}))});
 $$('form').forEach(f => {
-    if (f.id !== 'admin-login-form') {
+    if (f.id !== 'admin-login-form' && f.id !== 'add-course-form') {
         f.onsubmit = e => {
             e.preventDefault();
             toast('Demo only: nothing was submitted');
