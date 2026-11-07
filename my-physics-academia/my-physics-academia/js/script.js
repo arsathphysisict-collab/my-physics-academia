@@ -93,6 +93,16 @@ async function loadAdminDashboardData() {
         if (lessonsCount) lessonsCount.textContent = lessonCount ?? lessons.length;
 
         const courseNames = new Map((courses || []).map(course => [course.id, course.title]));
+        const lessonCourseSelect = document.getElementById('new-lesson-course');
+        if (lessonCourseSelect) {
+            const previousCourseId = lessonCourseSelect.value;
+            lessonCourseSelect.innerHTML = courses && courses.length
+                ? '<option value="">Select a course</option>' + courses.map(course => `<option value="${escapeAdminText(course.id)}">${escapeAdminText(course.title)} (Class ${course.class_level})</option>`).join('')
+                : '<option value="">Create a course first</option>';
+            if (previousCourseId && (courses || []).some(course => course.id === previousCourseId)) {
+                lessonCourseSelect.value = previousCourseId;
+            }
+        }
         if (coursesBody) {
             coursesBody.innerHTML = courses && courses.length
                 ? courses.map(course => `<tr><td>${escapeAdminText(course.title)}</td><td>Class ${course.class_level}</td><td>${course.is_published ? 'Published' : 'Draft'}</td></tr>`).join('')
@@ -254,6 +264,80 @@ if (addCourseForm) {
         } finally {
             saveCourseButton.disabled = false;
             saveCourseButton.textContent = 'Save Course';
+        }
+    });
+}
+
+
+const addLessonButton = document.getElementById('add-lesson');
+const addLessonPanel = document.getElementById('add-lesson-panel');
+const addLessonForm = document.getElementById('add-lesson-form');
+const cancelLessonButton = document.getElementById('cancel-lesson-btn');
+const saveLessonButton = document.getElementById('save-lesson-btn');
+
+if (addLessonButton && addLessonPanel) {
+    addLessonButton.addEventListener('click', async () => {
+        addLessonPanel.style.display = 'block';
+        await loadAdminDashboardData();
+        document.getElementById('new-lesson-course').focus();
+        addLessonPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+if (cancelLessonButton && addLessonPanel && addLessonForm) {
+    cancelLessonButton.addEventListener('click', () => {
+        addLessonForm.reset();
+        document.getElementById('add-lesson-error').textContent = '';
+        addLessonPanel.style.display = 'none';
+    });
+}
+if (addLessonForm) {
+    addLessonForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const errorBox = document.getElementById('add-lesson-error');
+        const courseId = document.getElementById('new-lesson-course').value;
+        const title = document.getElementById('new-lesson-title').value.trim();
+        const description = document.getElementById('new-lesson-description').value.trim();
+        const isPublished = document.getElementById('new-lesson-published').checked;
+        errorBox.textContent = '';
+
+        if (!courseId || !title) {
+            errorBox.textContent = 'Please select a course and enter a lesson title.';
+            return;
+        }
+        saveLessonButton.disabled = true;
+        saveLessonButton.textContent = 'Saving...';
+        try {
+            const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+            if (authError || !authData.user) throw new Error('Your login session has expired. Please log in again.');
+
+            const { data: adminRecord, error: adminError } = await supabaseClient
+                .from('admin_users').select('user_id').eq('user_id', authData.user.id).maybeSingle();
+            if (adminError || !adminRecord) throw new Error('Admin permission could not be verified.');
+
+            const { data: existingLessons, error: listError } = await supabaseClient
+                .from('lessons').select('sort_order').eq('course_id', courseId).order('sort_order', { ascending: false }).limit(1);
+            if (listError) throw listError;
+            const nextOrder = existingLessons && existingLessons.length ? (existingLessons[0].sort_order || 0) + 1 : 1;
+
+            const { error } = await supabaseClient.from('lessons').insert([{
+                course_id: courseId,
+                title,
+                description: description || null,
+                is_published: isPublished,
+                sort_order: nextOrder
+            }]);
+            if (error) throw error;
+
+            addLessonForm.reset();
+            addLessonPanel.style.display = 'none';
+            toast('Lesson saved successfully!');
+            await loadAdminDashboardData();
+        } catch (error) {
+            console.error('Lesson save failed:', error);
+            errorBox.textContent = error.message || 'Could not save the lesson. Please try again.';
+        } finally {
+            saveLessonButton.disabled = false;
+            saveLessonButton.textContent = 'Save Lesson';
         }
     });
 }
