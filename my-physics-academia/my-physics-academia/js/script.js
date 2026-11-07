@@ -83,7 +83,7 @@ async function loadAdminDashboardData() {
             { data: lessons, error: lessonsError, count: lessonCount }
         ] = await Promise.all([
             supabaseClient.from('courses').select('id,title,class_level,is_published', { count: 'exact' }).order('created_at', { ascending: false }),
-            supabaseClient.from('lessons').select('id,title,course_id,is_published,sort_order', { count: 'exact' }).order('sort_order', { ascending: true })
+            supabaseClient.from('lessons').select('id,title,course_id,is_published,sort_order,mux_status', { count: 'exact' }).order('sort_order', { ascending: true })
         ]);
 
         if (coursesError) throw coursesError;
