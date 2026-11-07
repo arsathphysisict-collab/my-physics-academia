@@ -46,7 +46,17 @@
     </button>
 </form></div></section>
 <section id="dash" class="dash"><div class="wrap"><div class="row" style="align-items:center;justify-content:space-between"><h1>Dashboard</h1><button type="button" class="btn o" id="admin-logout-btn">Logout</button></div><div class="g" style="margin-top:20px"><div class="card"><div class="meta"><span>Total Courses</span></div><div class="price" id="total-courses">—</div></div><div class="card"><div class="meta"><span>Total Lessons</span></div><div class="price" id="total-lessons">—</div></div><div class="card"><div class="meta"><span>Total Students</span></div><div class="price" id="total-students">Not connected</div></div></div>
-<div class="row"><button type="button" class="btn" id="add-course">Add New Course</button><button class="btn o" id="upload-video" onclick="document.querySelector('[data-pane=up]').click()">Upload Video</button></div>
+<div class="row"><button type="button" class="btn" id="add-course">Add New Course</button><button type="button" class="btn" id="add-lesson">Add New Lesson</button><button class="btn o" id="upload-video" onclick="document.querySelector('[data-pane=up]').click()">Upload Video</button></div>
+<section id="add-lesson-panel" class="card" style="display:none;margin:20px 0">
+<h2>Add New Lesson / Chapter</h2>
+<form id="add-lesson-form">
+<label>Select Course<select id="new-lesson-course" required><option value="">Loading courses...</option></select></label>
+<label>Lesson / Chapter Title<input type="text" id="new-lesson-title" maxlength="150" placeholder="Example: Electric Charges and Fields" required></label>
+<label>Description<textarea id="new-lesson-description" rows="4" maxlength="2000" placeholder="Briefly describe this lesson"></textarea></label>
+<label style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="new-lesson-published" style="width:auto"> Publish this lesson now</label>
+<p id="add-lesson-error" style="color:red" role="alert"></p>
+<div class="row"><button type="submit" class="btn" id="save-lesson-btn">Save Lesson</button><button type="button" class="btn o" id="cancel-lesson-btn">Cancel</button></div>
+</form></section>
 <section id="add-course-panel" class="card" style="display:none;margin:20px 0">
 <h2>Add New Course</h2>
 <form id="add-course-form">
