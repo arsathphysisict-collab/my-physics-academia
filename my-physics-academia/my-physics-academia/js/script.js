@@ -52,10 +52,11 @@ if (loginForm) {
         button.textContent = 'Login';
 
         if (loginError) {
-            error.textContent = 'Invalid email or password.';
-            return;
-        }
+    console.error("Supabase Login Error:", loginError);
 
+    error.textContent = loginError.message;
+    return;
+}
         if (data.user) {
             document.getElementById('login').style.display = 'none';
             document.getElementById('dash').classList.add('show');
