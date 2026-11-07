@@ -27,7 +27,48 @@ if($('#course-detail')){const n=new URLSearchParams(location.search).get('class'
 let cur=0;function sel(i){const all=$$('.rel a');if(!all.length)return;cur=(i+all.length)%all.length;all.forEach(x=>x.classList.remove('on'));const a=all[cur];a.classList.add('on');$('#l-title').textContent=a.dataset.t;$('#l-desc').textContent=a.dataset.d;$('#l-ch').textContent=a.dataset.c}
 $$('.rel a').forEach((a,i)=>a.onclick=e=>{e.preventDefault();sel(i)});
 $('#prev')&&($('#prev').onclick=()=>sel(cur-1));$('#next')&&($('#next').onclick=()=>sel(cur+1));
-$('#login-btn')&&($('#login-btn').onclick=e=>{e.preventDefault();$('#login').style.display='none';$('#dash').classList.add('show')});
+const loginForm = document.getElementById('admin-login-form');
+
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById('admin-email').value;
+        const password = document.getElementById('admin-password').value;
+        const error = document.getElementById('login-error');
+        const button = document.getElementById('login-btn');
+
+        error.textContent = '';
+        button.disabled = true;
+        button.textContent = 'Logging in...';
+
+        const { data, error: loginError } =
+            await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+        button.disabled = false;
+        button.textContent = 'Login';
+
+        if (loginError) {
+            error.textContent = 'Invalid email or password.';
+            return;
+        }
+
+        if (data.user) {
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('dash').classList.add('show');
+        }
+    });
+}
 $$('.tabs button').forEach(b=>b.onclick=()=>{$$('.tabs button').forEach(x=>x.classList.remove('on'));$$('.pane').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#'+b.dataset.pane).classList.add('on')});
 $$('.drop').forEach(dz=>{['dragover','dragenter'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.add('hot')}));['dragleave','drop'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.remove('hot');if(v==='drop')toast('Demo only: file not uploaded')}))});
-$$('form').forEach(f=>f.onsubmit=e=>{e.preventDefault();toast('Demo only: nothing was submitted')});
+$$('form').forEach(f => {
+    if (f.id !== 'admin-login-form') {
+        f.onsubmit = e => {
+            e.preventDefault();
+            toast('Demo only: nothing was submitted');
+        };
+    }
+});
