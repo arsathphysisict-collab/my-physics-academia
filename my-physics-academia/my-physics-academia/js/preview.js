@@ -151,14 +151,21 @@
       chapterElement.textContent = "Class " + (chapter.class_level || "") + " · " + (chapter.title || "Chapter");
       descriptionElement.textContent = video.category || "Preview lesson";
 
+      // Wait until the Mux custom element is registered before setting its properties.
+      await customElements.whenDefined("mux-player");
       const player = document.createElement("mux-player");
-      player.setAttribute("playback-id", data.playbackId);
       player.setAttribute("stream-type", "on-demand");
       player.setAttribute("playsinline", "");
       player.style.width = "100%";
       player.style.aspectRatio = "16 / 9";
       player.style.display = "block";
+
+      // Set the signed token BEFORE the playback ID so the first stream request
+      // is created with the token already attached.
+      player.playbackToken = data.token;
       player.tokens = { playback: data.token };
+      player.playbackId = data.playbackId;
+
       player.addEventListener("error", () => {
         showStatus("The video could not be played. Please contact the website administrator.", true);
       });
