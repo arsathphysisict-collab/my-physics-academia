@@ -15,7 +15,7 @@
 <header><div class="wrap nav"><a class="brand" href="index.html"><img src="images/logo.svg" alt="My Physics Academia logo">MY PHYSICS ACADEMIA</a>
 <button id="burger" aria-label="Open menu">☰</button><nav class="links" aria-label="Main"><a href="index.html" class=on>Home</a><a href="courses.html">Courses</a><a href="resources.html">Free Resources</a><a href="blog.html">Blog</a><a href="about.html">About</a><a href="contact.html">Contact</a><a class="btn" id="nav-enroll" data-track="enroll_now_click" data-label="nav" data-modal="Demo: enrolment is not live in this prototype." href="#">Enroll Now</a></nav></div></header>
 <main>
-<section class="hero"><div class="wrap grid"><div><span class="pill">Class 11 &amp; 12 Physics</span><h1>Master Physics. Understand the Universe.</h1><p>Explore Physics through clear explanations, structured lessons and concept-based learning.</p><a class="btn w" id="hero-explore" href="courses.html" data-track="explore_courses_click" data-label="hero">Explore Courses</a> <a class="btn o" style="color:#fff;border-color:#fff" href="lessons.html" id="hero-preview" data-track="video_preview_click" data-label="hero">Watch Preview</a></div>
+<section class="hero"><div class="wrap grid"><div><span class="pill">Class 11 &amp; 12 Physics</span><h1>Master Physics. Understand the Universe.</h1><p>Explore Physics through clear explanations, structured lessons and concept-based learning.</p><a class="btn w" id="hero-explore" href="courses.html" data-track="explore_courses_click" data-label="hero">Explore Courses</a> <a class="btn o" style="color:#fff;border-color:#fff" href="#preview-course-dialog" id="hero-preview" data-track="video_preview_click" data-label="hero">Watch Preview</a></div>
 <div><a class="mini" href="course-details.html?class=11"><span><b>Class 11 Physics</b><br>Mechanics to Waves</span><span>→</span></a><a class="mini" href="course-details.html?class=12"><span><b>Class 12 Physics</b><br>Electricity to Semiconductors</span><span>→</span></a></div></div></section>
 <section><div class="wrap"><h2>Featured Courses</h2><p class="sub">Two complete courses designed around the board syllabus.</p><div class="g g2"><article class="card course rv" id="card-class11" data-track="course_card_click" data-label="class11"><div class="thumb " role="img" aria-label="Class 11 Physics course thumbnail"><svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="3"><ellipse cx="32" cy="32" rx="26" ry="10"/><ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(60 32 32)"/><ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(120 32 32)"/><circle cx="32" cy="32" r="4" fill="#fff"/></svg></div><div class="b"><h3>Class 11 Physics</h3><p>Mechanics, thermodynamics, waves and oscillations built from first principles.</p><div class="meta"><span>14 chapters</span><span class="demo">Demo price</span></div><div class="price">₹2,999</div><div class="row"><a class="btn o" id="explore-class11" data-track="explore_course_click" data-label="class11" href="course-details.html?class=11">Explore Course</a><a class="btn" id="enroll-class11" href="#" data-track="enroll_now_click" data-label="class11" data-modal="Demo: enrolment is not live in this prototype.">Enroll Now</a></div></div></article><article class="card course rv" id="card-class12" data-track="course_card_click" data-label="class12"><div class="thumb t2" role="img" aria-label="Class 12 Physics course thumbnail"><svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="3"><ellipse cx="32" cy="32" rx="26" ry="10"/><ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(60 32 32)"/><ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(120 32 32)"/><circle cx="32" cy="32" r="4" fill="#fff"/></svg></div><div class="b"><h3>Class 12 Physics</h3><p>Electricity, magnetism, optics, modern physics and semiconductors, board and exam ready.</p><div class="meta"><span>14 chapters</span><span class="demo">Demo price</span></div><div class="price">₹3,499</div><div class="row"><a class="btn o" id="explore-class12" data-track="explore_course_click" data-label="class12" href="course-details.html?class=12">Explore Course</a><a class="btn" id="enroll-class12" href="#" data-track="enroll_now_click" data-label="class12" data-modal="Demo: enrolment is not live in this prototype.">Enroll Now</a></div></div></article></div></div></section>
 <section class="alt"><div class="wrap"><div class="center"><h2>Why Choose Us</h2><p class="sub">Physics taught for understanding, not memorising.</p></div><div class="g"><div class="card rv"><div class="ico">💡</div><h3>Concept First</h3><p>Every topic starts with the idea, then the maths.</p></div><div class="card rv"><div class="ico">🗂️</div><h3>Structured Lessons</h3><p>Chapter-wise path from basics to advanced numericals.</p></div><div class="card rv"><div class="ico">🎯</div><h3>Exam Focused</h3><p>Board and entrance-style practice built in.</p></div><div class="card rv"><div class="ico">📱</div><h3>Learn Anywhere</h3><p>Works on phone, tablet and laptop.</p></div></div></div></section>
@@ -26,4 +26,33 @@
 <section class="hero center"><div class="wrap"><h2 style="color:#fff">Start your Physics journey today</h2><br><a class="btn w" href="pricing.html" id="cta-pricing" data-track="buy_now_click" data-label="home_cta">View Pricing</a></div></section></main>
 <footer><div class="wrap"><div class="g"><div><h3>My Physics Academia</h3><p>Understand Physics. Explore the Universe.</p></div><div><h3>Learn</h3><a href="courses.html">Courses</a><a href="pricing.html">Pricing</a><a href="lessons.html">Video Lessons</a><a href="resources.html">Free Resources</a></div><div><h3>Company</h3><a href="about.html">About</a><a href="blog.html">Blog</a><a href="contact.html">Contact</a><a href="admin.html">Admin (demo)</a></div></div><p class="copy">© 2026 My Physics Academia. Prototype with sample content; prices and testimonials are demo data.</p></div></footer>
 <div id="toast" role="status"></div><div id="modal"><div class="card"><h3>Demo Notice</h3><p></p><br><button class="btn" data-close>Close</button></div></div>
-<script src="js/script.js"></script></body></html>
+<dialog id="preview-course-dialog" style="border:0;border-radius:20px;padding:28px;max-width:min(92vw,420px);width:100%;box-shadow:0 24px 70px #0b1f4b55">
+  <h2 style="margin-bottom:8px">Choose Your Class</h2>
+  <p style="color:#5b6b8c;margin-bottom:20px">Select the course preview you want to watch.</p>
+  <div style="display:grid;gap:12px">
+    <a class="btn" href="lessons.html?class=11">Class 11 Preview</a>
+    <a class="btn" href="lessons.html?class=12">Class 12 Preview</a>
+    <button class="btn o" type="button" id="close-preview-course-dialog">Cancel</button>
+  </div>
+</dialog>
+<style>
+#preview-course-dialog::backdrop{background:rgba(11,31,75,.65);backdrop-filter:blur(3px)}
+#preview-course-dialog h2{font-size:1.55rem}
+#preview-course-dialog .btn{width:100%;text-align:center}
+</style>
+<script src="js/script.js"></script>
+<script>
+  const previewChoiceLink = document.getElementById('hero-preview');
+  const previewChoiceDialog = document.getElementById('preview-course-dialog');
+  const closePreviewChoice = document.getElementById('close-preview-course-dialog');
+  if (previewChoiceLink && previewChoiceDialog) {
+    previewChoiceLink.addEventListener('click', event => {
+      event.preventDefault();
+      previewChoiceDialog.showModal();
+    });
+  }
+  if (closePreviewChoice && previewChoiceDialog) {
+    closePreviewChoice.addEventListener('click', () => previewChoiceDialog.close());
+  }
+</script>
+</body></html>
