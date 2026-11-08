@@ -267,11 +267,13 @@
         }
         playButton.textContent = "Ⅱ";
         playButton.setAttribute("aria-label", "Pause preview");
+        centerPlayButton.style.display = "none";
       });
 
       player.addEventListener("pause", () => {
         playButton.textContent = "▶";
         playButton.setAttribute("aria-label", "Play preview");
+        centerPlayButton.style.display = "flex";
       });
 
       player.addEventListener("timeupdate", () => {
@@ -296,6 +298,20 @@
         clipFinished = true;
         showStatus("Preview finished. This preview has now been used.");
       });
+      const centerPlayButton = document.createElement("button");
+      centerPlayButton.type = "button";
+      centerPlayButton.className = "preview-center-play";
+      centerPlayButton.textContent = "▶";
+      centerPlayButton.setAttribute("aria-label", "Play preview");
+      centerPlayButton.style.cssText = "position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:11;width:68px;height:68px;border:0;border-radius:50%;background:rgba(0,0,0,.68);color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 14px rgba(0,0,0,.35)";
+      centerPlayButton.addEventListener("click", async () => {
+        try {
+          await player.play();
+        } catch (error) {
+          showStatus("Could not play this preview. Please try again.", true);
+        }
+      });
+
       const controls = document.createElement("div");
       controls.className = "preview-custom-controls";
       controls.style.cssText = "position:absolute;left:0;right:0;bottom:0;z-index:10;display:flex;align-items:center;gap:12px;padding:12px 14px;background:linear-gradient(transparent,rgba(0,0,0,.82));color:#fff";
@@ -367,7 +383,7 @@
       });
 
       controls.append(playButton, progressBar, volumeButton, volumeBar, fullscreenButton);
-      playerContainer.replaceChildren(player, controls);
+      playerContainer.replaceChildren(player, centerPlayButton, controls);
       showStatus("Your preview is ready. Only one video can play at a time.");
     } catch (error) {
       console.error("Preview playback request failed:", error);
