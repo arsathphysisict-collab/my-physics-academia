@@ -61,16 +61,36 @@
     button.className = "preview-item";
     button.dataset.previewId = video.id;
     button.disabled = watched;
+    const thumbnail = document.createElement("span");
+    thumbnail.className = "preview-thumb";
+    thumbnail.setAttribute("aria-hidden", "true");
+
+    const thumbnailLabel = document.createElement("span");
+    thumbnailLabel.className = "preview-thumb-label";
+    thumbnailLabel.textContent = "FREE PREVIEW";
+
+    const playIcon = document.createElement("span");
+    playIcon.className = "preview-thumb-play";
+    playIcon.textContent = "▶";
+    thumbnail.append(thumbnailLabel, playIcon);
+
+    const copy = document.createElement("span");
+    copy.className = "preview-copy";
+
     const heading = document.createElement("strong");
-    heading.textContent = (index + 1) + ". " + video.title;
+    heading.textContent = video.title;
+
     const detail = document.createElement("small");
     const chapter = video.chapter || {};
     detail.textContent = "Class " + (chapter.class_level || "") + " · " +
       (chapter.title || "Chapter") + " · " + formatDuration(video.duration_seconds);
+
     const state = document.createElement("span");
     state.className = "preview-state";
-    state.textContent = watched ? "Already watched" : "Watch preview";
-    button.append(heading, detail, state);
+    state.textContent = watched ? "Already watched" : "▶  Watch preview";
+
+    copy.append(heading, detail, state);
+    button.append(thumbnail, copy);
     button.addEventListener("click", () => playPreview(video, button));
     return button;
   }
