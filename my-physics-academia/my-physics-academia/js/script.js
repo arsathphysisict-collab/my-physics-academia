@@ -77,18 +77,21 @@ async function loadAdminDashboardData() {
 
         const [
             { data: concepts, error: conceptsError, count: conceptCount },
-            { data: chapters, error: chaptersError }
+            { data: chapters, error: chaptersError },
+            { data: lessons, error: lessonsError }
         ] = await Promise.all([
-            supabaseClient.from('concepts').select('id,title,chapter_id,category,is_published,mux_status,sort_order,is_preview,preview_order,thumbnail_url', { count: 'exact' }).order('created_at', { ascending: false }),
-            supabaseClient.from('chapters').select('id,title,class_level,sort_order').order('class_level', { ascending: true }).order('sort_order', { ascending: true }).range(0, 999)
+            supabaseClient.from('concepts').select('id,title,chapter_id,lesson_id,category,is_published,mux_status,sort_order,is_preview,preview_order,thumbnail_url', { count: 'exact' }).order('created_at', { ascending: true }),
+            supabaseClient.from('chapters').select('id,title,class_level,sort_order').order('class_level', { ascending: true }).order('sort_order', { ascending: true }).range(0, 999),
+            supabaseClient.from('lessons').select('id,title,chapter_id,sort_order').not('chapter_id', 'is', null).order('sort_order', { ascending: true }).range(0, 999)
         ]);
 
         if (conceptsError) throw conceptsError;
         if (chaptersError) throw chaptersError;
+        if (lessonsError) throw lessonsError;
 
         // The two official class courses come from the public syllabus, not legacy test rows.
         if (coursesCount) coursesCount.textContent = Object.keys(COURSES).length;
-        if (lessonsCount) lessonsCount.textContent = conceptCount ?? concepts.length;
+        if (lessonsCount) lessonsCount.textContent = lessons.length;
 
         if (coursesBody) {
             coursesBody.innerHTML = Object.entries(COURSES).map(([classLevel, course]) =>
@@ -97,19 +100,53 @@ async function loadAdminDashboardData() {
         }
 
         const chapterMap = new Map((chapters || []).map(ch => [ch.id, ch]));
+        const lessonMap = new Map((lessons || []).map(lesson => [lesson.id, lesson]));
+        const conceptsByLesson = new Map();
+        const unassignedConcepts = [];
+        (concepts || []).forEach(concept => {
+            if (concept.lesson_id && lessonMap.has(concept.lesson_id)) {
+                if (!conceptsByLesson.has(concept.lesson_id)) conceptsByLesson.set(concept.lesson_id, []);
+                conceptsByLesson.get(concept.lesson_id).push(concept);
+            } else {
+                unassignedConcepts.push(concept);
+            }
+        });
+
+        function renderConceptRow(concept, chapterLabel, lessonTitle) {
+            const previewValue = concept.is_preview ? String(concept.preview_order || '') : '';
+            const previewOptions = [['', 'Not a Preview'], ['1', 'Preview Slot 1'], ['2', 'Preview Slot 2'], ['3', 'Preview Slot 3']]
+                .map(([value, label]) => '<option value="' + value + '" ' + (previewValue === value ? 'selected' : '') + '>' + label + '</option>').join('');
+            return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(lessonTitle) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td><td>' + (concept.is_published ? 'Published' : 'Draft') + '</td><td>' + (concept.thumbnail_url ? '<img src="' + escapeAdminText(concept.thumbnail_url) + '" alt="Current video thumbnail" style="width:76px;height:44px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px">' : '<span style="display:block;font-size:12px;margin-bottom:6px">No thumbnail set</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-thumbnail-upload="' + escapeAdminText(concept.id) + '" aria-label="Upload video thumbnail" style="max-width:180px;font-size:12px"><div style="margin-top:8px"><label style="display:block;font-size:11px;margin-bottom:3px">Preview placement</label><select data-preview-setting="' + escapeAdminText(concept.id) + '" aria-label="Preview status and slot" style="max-width:150px;font-size:12px">' + previewOptions + '</select></div></td><td><button type="button" class="btn ' + (concept.is_published ? 'o' : '') + '" data-publish-concept="' + escapeAdminText(concept.id) + '" data-published="' + (concept.is_published ? 'true' : 'false') + '" ' + (concept.mux_status === 'ready' ? '' : 'disabled title="Video must be ready before publishing"') + '>' + (concept.is_published ? 'Unpublish' : 'Publish') + '</button></td></tr>';
+        }
+
         if (lessonsBody) {
-            lessonsBody.innerHTML = concepts && concepts.length
-                ? concepts.map(concept => {
+            const rows = [];
+            (lessons || []).forEach(lesson => {
+                const chapter = chapterMap.get(lesson.chapter_id);
+                const chapterLabel = chapter
+                    ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + ((COURSES[Number(chapter.class_level)] && COURSES[Number(chapter.class_level)].ch[Number(chapter.sort_order) - 1]) || chapter.title)
+                    : 'Chapter unavailable';
+                const lessonConcepts = conceptsByLesson.get(lesson.id) || [];
+                rows.push('<tr><td colspan="7" style="background:var(--surface,#f3f5f7);font-weight:700;padding:12px">' + escapeAdminText(chapterLabel) + ' — ' + escapeAdminText(lesson.title) + ' <span style="font-weight:400">(' + lessonConcepts.length + ' concepts)</span></td></tr>');
+                if (lessonConcepts.length) {
+                    lessonConcepts.forEach(concept => rows.push(renderConceptRow(concept, chapterLabel, lesson.title)));
+                } else {
+                    rows.push('<tr><td colspan="7" style="color:#777">No concepts in this lesson yet.</td></tr>');
+                }
+            });
+
+            if (unassignedConcepts.length) {
+                rows.push('<tr><td colspan="7" style="background:var(--surface,#f3f5f7);font-weight:700;padding:12px">Unassigned / Legacy Concepts</td></tr>');
+                unassignedConcepts.forEach(concept => {
                     const chapter = chapterMap.get(concept.chapter_id);
-                    const chapterLabel = chapter
-                        ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + ((COURSES[Number(chapter.class_level)] && COURSES[Number(chapter.class_level)].ch[Number(chapter.sort_order) - 1]) || chapter.title)
-                        : 'Chapter unavailable';
-                    const previewValue = concept.is_preview ? String(concept.preview_order || '') : '';
-                    const previewOptions = [['', 'Not a Preview'], ['1', 'Preview Slot 1'], ['2', 'Preview Slot 2'], ['3', 'Preview Slot 3']]
-                        .map(([value, label]) => '<option value="' + value + '" ' + (previewValue === value ? 'selected' : '') + '>' + label + '</option>').join('');
-                    return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td><td>' + (concept.is_published ? 'Published' : 'Draft') + '</td><td>' + (concept.thumbnail_url ? '<img src="' + escapeAdminText(concept.thumbnail_url) + '" alt="Current video thumbnail" style="width:76px;height:44px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px">' : '<span style="display:block;font-size:12px;margin-bottom:6px">No thumbnail set</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-thumbnail-upload="' + escapeAdminText(concept.id) + '" aria-label="Upload video thumbnail" style="max-width:180px;font-size:12px"><div style="margin-top:8px"><label style="display:block;font-size:11px;margin-bottom:3px">Preview placement</label><select data-preview-setting="' + escapeAdminText(concept.id) + '" aria-label="Preview status and slot" style="max-width:150px;font-size:12px">' + previewOptions + '</select></div></td><td><button type="button" class="btn ' + (concept.is_published ? 'o' : '') + '" data-publish-concept="' + escapeAdminText(concept.id) + '" data-published="' + (concept.is_published ? 'true' : 'false') + '" ' + (concept.mux_status === 'ready' ? '' : 'disabled title="Video must be ready before publishing"') + '>' + (concept.is_published ? 'Unpublish' : 'Publish') + '</button></td></tr>';
-                  }).join('')
-                : '<tr><td colspan="6">No concepts uploaded yet. Add a concept using Upload Interface.</td></tr>';
+                    const chapterLabel = chapter ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + chapter.title : 'Legacy record';
+                    rows.push(renderConceptRow(concept, chapterLabel, 'Not assigned'));
+                });
+            }
+
+            lessonsBody.innerHTML = rows.length
+                ? rows.join('')
+                : '<tr><td colspan="7">No lessons found. Check the chapter lesson records.</td></tr>';
         }
     } catch (error) {
         console.error('Admin dashboard data load failed:', error);
@@ -460,7 +497,7 @@ if (addLessonForm) {
 }
 
 
-// Concept-based Mux upload flow: Class -> Chapter -> Category -> Concept -> Video.
+// Concept-based Mux upload flow: Class -> Chapter -> Lesson -> Concept -> Video.
 const uploadClassSelect = document.getElementById('upload-class-select');
 const uploadChapterSelect = document.getElementById('upload-chapter-select');
 const uploadLessonSelect = document.getElementById('upload-lesson-select');
