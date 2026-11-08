@@ -15,18 +15,20 @@
 .preview-intro{margin-bottom:28px}
 .preview-status{margin:14px 0;color:var(--muted,#667085);font-size:.95rem}
 .preview-status.error{color:#b42318}
-.preview-placeholder{min-height:320px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:radial-gradient(circle at 75% 25%,#294b82 0,transparent 35%),linear-gradient(135deg,#101828,#172b4d);color:#fff;border-radius:18px;overflow:hidden}
-.preview-placeholder span{font-size:48px;width:82px;height:82px;border:1px solid #ffffff70;border-radius:50%;display:grid;place-items:center;background:#ffffff18}
-.preview-placeholder small{color:#d0d5dd;font-size:.95rem}
+.preview-placeholder{min-height:320px;position:relative;isolation:isolate;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at 50% 42%,#4f9cf0 0%,#2868bd 38%,#123b78 100%);color:#fff;border-radius:18px;overflow:hidden}
+.preview-placeholder:before,.preview-placeholder:after{content:"";position:absolute;z-index:-1;left:50%;top:43%;width:min(72%,420px);aspect-ratio:1;border:1px solid #d9edff55;border-radius:50%;transform:translate(-50%,-50%) rotate(-24deg) scaleY(.38);box-shadow:0 0 0 28px #d9edff0b,0 0 0 58px #d9edff08}
+.preview-placeholder:after{transform:translate(-50%,-50%) rotate(48deg) scaleY(.38);width:min(58%,340px);border-color:#ffffff42}
+.preview-placeholder span{position:relative;z-index:1;font-size:38px;width:78px;height:78px;padding-left:4px;border:1px solid #ffffffb8;border-radius:50%;display:grid;place-items:center;background:#ffffff24;color:#fff;box-shadow:0 8px 28px #092c5b55;backdrop-filter:blur(5px)}
+.preview-placeholder small{position:relative;z-index:1;color:#eaf4ff;font-size:.95rem;text-shadow:0 1px 5px #123b7866}
 .preview-list{display:grid;gap:14px}
 .preview-item{width:100%;text-align:left;padding:10px;border:1px solid #e4e7ec;border-radius:16px;background:#fff;cursor:pointer;color:inherit;display:grid;grid-template-columns:116px minmax(0,1fr);align-items:center;gap:14px;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
 .preview-item:hover,.preview-item.active{border-color:var(--primary,#2563eb);box-shadow:0 8px 24px #10182812;transform:translateY(-1px)}
 .preview-item:disabled{cursor:not-allowed;opacity:.72;transform:none}
-.preview-thumb{position:relative;aspect-ratio:16/10;border-radius:11px;overflow:hidden;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 72% 25%,#6da4e8 0 2%,transparent 3%),radial-gradient(circle at 72% 25%,#315f9d 0 15%,transparent 16%),linear-gradient(135deg,#0b1830,#183c68 58%,#2563a6)}
-.preview-thumb:before,.preview-thumb:after{content:"";position:absolute;border:1px solid #ffffff30;border-radius:50%;width:90px;height:90px;right:-28px;bottom:-48px}
-.preview-thumb:after{width:58px;height:58px;right:-12px;bottom:-32px}
-.preview-thumb-label{position:absolute;left:9px;top:8px;font-size:.58rem;letter-spacing:.1em;font-weight:800;color:#dbeafe}
-.preview-thumb-play{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;padding-left:2px;background:#ffffffed;color:#174477;font-size:13px;box-shadow:0 3px 12px #0003}
+.preview-thumb{position:relative;isolation:isolate;aspect-ratio:16/10;border-radius:11px;overflow:hidden;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 70% 28%,#a9d5ff 0 2%,transparent 3%),radial-gradient(circle at 70% 28%,#78b9f5 0 13%,transparent 14%),linear-gradient(135deg,#2868bd,#4f9cf0 55%,#174b91)}
+.preview-thumb:before,.preview-thumb:after{content:"";position:absolute;z-index:0;border:1px solid #ffffff65;border-radius:50%;width:105px;height:105px;right:-28px;bottom:-54px;transform:rotate(-28deg) scaleY(.42);box-shadow:0 0 0 14px #ffffff0d}
+.preview-thumb:after{width:75px;height:75px;right:-13px;bottom:-39px;transform:rotate(42deg) scaleY(.42)}
+.preview-thumb-label{position:absolute;z-index:2;left:9px;top:8px;font-size:.58rem;letter-spacing:.1em;font-weight:800;color:#fff;text-shadow:0 1px 4px #174b9177}
+.preview-thumb-play{position:relative;z-index:2;width:36px;height:36px;border:1px solid #ffffffb8;border-radius:50%;display:grid;place-items:center;padding-left:2px;background:#ffffffdf;color:#205da5;font-size:13px;box-shadow:0 4px 14px #174b9144}
 .preview-copy{min-width:0;display:grid;gap:6px}
 .preview-copy strong{font-size:.96rem;line-height:1.35;color:#101828}
 .preview-copy small{color:#667085;line-height:1.45;font-size:.78rem}
