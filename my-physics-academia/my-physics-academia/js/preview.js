@@ -115,8 +115,13 @@
     stopCurrentPlayer();
 
     try {
+      // Send the selected class to the Edge Function so it filters
+      // before applying the three-preview limit.
+      const requestedClass = new URLSearchParams(window.location.search).get("class");
       const { data, error } = await supabaseClient.functions.invoke("list-preview-videos", {
-        body: {}
+        body: {
+          class_level: requestedClass
+        }
       });
       if (error) throw error;
       if (!data || data.success !== true || !Array.isArray(data.previews)) {
@@ -124,7 +129,6 @@
       }
 
       // When opened from a specific course, show previews for that class only.
-      const requestedClass = new URLSearchParams(window.location.search).get("class");
       const previews = requestedClass === "11" || requestedClass === "12"
         ? data.previews.filter(video => String((video.chapter || {}).class_level) === requestedClass)
         : data.previews;
