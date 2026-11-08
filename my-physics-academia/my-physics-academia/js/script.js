@@ -802,7 +802,7 @@ if (uploadVideoForm) uploadVideoForm.addEventListener('submit', async (event) =>
 $$('.tabs button').forEach(b=>b.addEventListener('click',()=>{$$('.tabs button').forEach(x=>x.classList.remove('on'));$$('.pane').forEach(x=>x.classList.remove('on'));b.classList.add('on');const pane=document.getElementById(b.dataset.pane);if(pane)pane.classList.add('on');}));
 $$('.drop').forEach(dz=>{['dragover','dragenter'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.add('hot')}));['dragleave','drop'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.remove('hot');if(v==='drop')toast('Demo only: file not uploaded')}))});
 $$('form').forEach(f => {
-    if (!['admin-login-form', 'add-course-form', 'add-lesson-form', 'upload-video-form', 'mux-asset-upload-form'].includes(f.id)) {
+    if (!['admin-login-form', 'add-course-form', 'add-lesson-form', 'upload-video-form', 'mux-asset-upload-form', 'asset-concept-form'].includes(f.id)) {
         f.onsubmit = e => {
             e.preventDefault();
             toast('Demo only: nothing was submitted');
@@ -825,7 +825,7 @@ async function loadMuxAssetLibrary() {
 
     const { data, error } = await supabaseClient
         .from('mux_assets')
-        .select('id,original_filename,mux_status,duration_seconds,created_at')
+        .select('id,original_filename,display_name,mux_status,duration_seconds,created_at,mux_asset_id,mux_playback_id')
         .order('created_at', { ascending: false })
         .range(0, 499);
 
@@ -839,7 +839,7 @@ async function loadMuxAssetLibrary() {
         status.textContent = 'No assets in the library yet.';
         const row = document.createElement('tr');
         const cell = document.createElement('td');
-        cell.colSpan = 4;
+        cell.colSpan = 5;
         cell.textContent = 'No assets uploaded yet.';
         row.appendChild(cell);
         list.appendChild(row);
@@ -854,7 +854,7 @@ async function loadMuxAssetLibrary() {
         const duration = document.createElement('td');
         const created = document.createElement('td');
 
-        filename.textContent = asset.original_filename || 'Unnamed video';
+        filename.textContent = asset.display_name || asset.original_filename || ('Asset ' + asset.id.slice(0, 8));
         assetStatus.textContent = asset.mux_status || 'Unknown';
         duration.textContent = asset.duration_seconds !== null && asset.duration_seconds !== undefined
             ? (asset.duration_seconds + ' sec')
@@ -863,7 +863,36 @@ async function loadMuxAssetLibrary() {
             ? new Date(asset.created_at).toLocaleString()
             : '—';
 
-        row.append(filename, assetStatus, duration, created);
+        const renameCell = document.createElement('td');
+        const renameInput = document.createElement('input');
+        renameInput.type = 'text';
+        renameInput.maxLength = 255;
+        renameInput.value = asset.display_name || '';
+        renameInput.placeholder = asset.original_filename || 'Enter asset name';
+        renameInput.setAttribute('aria-label', 'Custom asset name');
+        const renameButton = document.createElement('button');
+        renameButton.type = 'button';
+        renameButton.className = 'btn o';
+        renameButton.textContent = 'Save Name';
+        renameButton.addEventListener('click', async () => {
+            renameButton.disabled = true;
+            try {
+                const { error: renameError } = await supabaseClient
+                    .from('mux_assets')
+                    .update({ display_name: renameInput.value.trim() || null })
+                    .eq('id', asset.id);
+                if (renameError) throw renameError;
+                toast(renameInput.value.trim() ? 'Asset name updated.' : 'Custom name cleared.');
+                await loadMuxAssetLibrary();
+                await loadMuxAssetOptions();
+            } catch (error) {
+                console.error('Asset rename failed:', error);
+                toast('Could not update asset name: ' + error.message);
+                renameButton.disabled = false;
+            }
+        });
+        renameCell.append(renameInput, renameButton);
+        row.append(filename, assetStatus, duration, created, renameCell);
         list.appendChild(row);
     });
 }
@@ -955,6 +984,162 @@ const refreshMuxAssetsButton = document.getElementById('refresh-mux-assets');
 if (refreshMuxAssetsButton) {
     refreshMuxAssetsButton.addEventListener('click', loadMuxAssetLibrary);
 }
+
+// Asset-based concept creation: reuses a ready library asset without uploading it again.
+const assetConceptClass = document.getElementById('asset-concept-class');
+const assetConceptChapter = document.getElementById('asset-concept-chapter');
+const assetConceptLesson = document.getElementById('asset-concept-lesson');
+const assetConceptAsset = document.getElementById('asset-concept-mux-asset');
+
+async function loadMuxAssetOptions() {
+    if (!assetConceptAsset || typeof supabaseClient === 'undefined') return;
+    const { data, error } = await supabaseClient
+        .from('mux_assets')
+        .select('id,original_filename,display_name,mux_status,duration_seconds,mux_asset_id,mux_playback_id')
+        .eq('mux_status', 'ready')
+        .order('created_at', { ascending: false })
+        .range(0, 499);
+    if (error) {
+        assetConceptAsset.innerHTML = '<option value="">Could not load assets</option>';
+        console.error('Ready Mux asset lookup failed:', error);
+        return;
+    }
+    const readyAssets = (data || []).filter(asset => asset.mux_asset_id && asset.mux_playback_id);
+    assetConceptAsset.innerHTML = '<option value="">Select a ready asset</option>' + readyAssets.map(asset => {
+        const label = asset.display_name || asset.original_filename || ('Asset ' + asset.id.slice(0, 8));
+        return '<option value="' + escapeAdminText(asset.id) + '" data-duration="' + Number(asset.duration_seconds || 0) + '">' +
+            escapeAdminText(label) + ' (' + Number(asset.duration_seconds || 0) + ' sec)</option>';
+    }).join('');
+    if (!readyAssets.length) assetConceptAsset.innerHTML = '<option value="">No ready assets available</option>';
+}
+
+if (assetConceptClass) {
+    assetConceptClass.addEventListener('change', async () => {
+        assetConceptLesson.innerHTML = '<option value="">Select a chapter first</option>';
+        assetConceptLesson.disabled = true;
+        try { await loadAssetConceptChapters(assetConceptClass.value); }
+        catch (error) { document.getElementById('asset-concept-error').textContent = error.message; }
+    });
+}
+async function loadAssetConceptChapters(level) {
+    assetConceptChapter.disabled = true;
+    assetConceptChapter.innerHTML = '<option value="">Loading chapters...</option>';
+    if (!level) {
+        assetConceptChapter.innerHTML = '<option value="">Select a class first</option>';
+        return;
+    }
+    const info = COURSES[Number(level)];
+    const { data, error } = await supabaseClient.from('chapters')
+        .select('id,sort_order').eq('class_level', Number(level)).order('sort_order').range(0, 99);
+    if (error) throw error;
+    const byOrder = new Map((data || []).map(row => [Number(row.sort_order), row]));
+    assetConceptChapter.innerHTML = '<option value="">Select a chapter</option>' + info.ch.map((title, index) => {
+        const row = byOrder.get(index + 1);
+        return row ? '<option value="' + escapeAdminText(row.id) + '">' + escapeAdminText(title) + '</option>' : '';
+    }).join('');
+    assetConceptChapter.disabled = false;
+}
+if (assetConceptChapter) assetConceptChapter.addEventListener('change', async () => {
+    assetConceptLesson.disabled = true;
+    assetConceptLesson.innerHTML = '<option value="">Loading lessons...</option>';
+    if (!assetConceptChapter.value) {
+        assetConceptLesson.innerHTML = '<option value="">Select a chapter first</option>';
+        return;
+    }
+    const { data, error } = await supabaseClient.from('lessons')
+        .select('id,title').eq('chapter_id', assetConceptChapter.value).order('sort_order');
+    if (error) {
+        document.getElementById('asset-concept-error').textContent = error.message;
+        return;
+    }
+    assetConceptLesson.innerHTML = '<option value="">Select a lesson</option>' +
+        (data || []).map(row => '<option value="' + escapeAdminText(row.id) + '">' + escapeAdminText(row.title) + '</option>').join('');
+    assetConceptLesson.disabled = !data || !data.length;
+});
+if (assetConceptAsset) assetConceptAsset.addEventListener('change', () => {
+    const selected = assetConceptAsset.selectedOptions[0];
+    const duration = selected ? Number(selected.dataset.duration) : 0;
+    const endInput = document.getElementById('asset-concept-end');
+    if (duration > 0) {
+        endInput.max = String(duration);
+        endInput.placeholder = 'Maximum ' + duration + ' seconds';
+    } else {
+        endInput.removeAttribute('max');
+    }
+});
+const assetConceptForm = document.getElementById('asset-concept-form');
+if (assetConceptForm) assetConceptForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const errorBox = document.getElementById('asset-concept-error');
+    const saveButton = document.getElementById('asset-concept-save');
+    errorBox.textContent = '';
+    const chapterId = assetConceptChapter.value;
+    const lessonId = assetConceptLesson.value;
+    const assetId = assetConceptAsset.value;
+    const title = document.getElementById('asset-concept-title').value.trim();
+    const start = Number(document.getElementById('asset-concept-start').value);
+    const end = Number(document.getElementById('asset-concept-end').value);
+    const selected = assetConceptAsset.selectedOptions[0];
+    const duration = selected ? Number(selected.dataset.duration) : 0;
+    if (!chapterId || !lessonId || !assetId || !title || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) {
+        errorBox.textContent = 'Select the class, chapter, lesson and asset; enter a valid concept name and clip range.';
+        return;
+    }
+    if (duration > 0 && end > duration) {
+        errorBox.textContent = 'End Time cannot exceed the asset duration (' + duration + ' seconds).';
+        return;
+    }
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving...';
+    try {
+        const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+        if (authError || !authData.user) throw new Error('Your login session has expired. Please log in again.');
+        const { data: adminRecord, error: adminError } = await supabaseClient.from('admin_users')
+            .select('user_id').eq('user_id', authData.user.id).maybeSingle();
+        if (adminError || !adminRecord) throw new Error('Admin permission could not be verified.');
+        const { data: lesson, error: lessonError } = await supabaseClient.from('lessons')
+            .select('id,title,chapter_id').eq('id', lessonId).eq('chapter_id', chapterId).single();
+        if (lessonError || !lesson) throw new Error('The selected lesson does not belong to this chapter.');
+        const { data: asset, error: assetError } = await supabaseClient.from('mux_assets')
+            .select('id,mux_asset_id,mux_playback_id,mux_status,duration_seconds')
+            .eq('id', assetId).eq('mux_status', 'ready').single();
+        if (assetError || !asset || !asset.mux_asset_id || !asset.mux_playback_id) {
+            throw new Error('The selected Mux asset is not ready. Refresh the Asset Library and try again.');
+        }
+        if (asset.duration_seconds && end > Number(asset.duration_seconds)) {
+            throw new Error('End Time cannot exceed the video duration (' + asset.duration_seconds + ' seconds).');
+        }
+        const { error: saveError } = await supabaseClient.from('concepts').insert([{
+            chapter_id: chapterId,
+            lesson_id: lesson.id,
+            category: lesson.title,
+            title,
+            mux_asset_ref_id: asset.id,
+            start_time_seconds: start,
+            end_time_seconds: end,
+            mux_asset_id: asset.mux_asset_id,
+            mux_playback_id: asset.mux_playback_id,
+            duration_seconds: asset.duration_seconds,
+            mux_status: 'ready',
+            is_published: false
+        }]);
+        if (saveError) throw saveError;
+        toast('Concept linked to the Mux asset successfully.');
+        assetConceptForm.reset();
+        assetConceptChapter.disabled = true;
+        assetConceptLesson.disabled = true;
+        assetConceptChapter.innerHTML = '<option value="">Select a class first</option>';
+        assetConceptLesson.innerHTML = '<option value="">Select a chapter first</option>';
+        await loadAdminDashboardData();
+    } catch (error) {
+        console.error('Asset-based concept save failed:', error);
+        errorBox.textContent = error.message || 'Could not save the concept.';
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Save Concept';
+    }
+});
+loadMuxAssetOptions();
 
 // Load the library when its dashboard tab is opened.
 document.querySelectorAll('.tabs button[data-pane="ma"]').forEach(button => {
