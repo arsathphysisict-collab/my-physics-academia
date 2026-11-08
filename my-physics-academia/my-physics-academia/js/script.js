@@ -102,7 +102,7 @@ async function loadAdminDashboardData() {
                 ? concepts.map(concept => {
                     const chapter = chapterMap.get(concept.chapter_id);
                     const chapterLabel = chapter
-                        ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + chapter.title
+                        ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + ((COURSES[Number(chapter.class_level)] && COURSES[Number(chapter.class_level)].ch[Number(chapter.sort_order) - 1]) || chapter.title)
                         : 'Chapter unavailable';
                     return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td></tr>';
                   }).join('')
@@ -353,24 +353,41 @@ async function loadUploadChapters(classLevel) {
         uploadChapterSelect.innerHTML = '<option value="">Select a class first</option>';
         return;
     }
-    const { data, error, count } = await supabaseClient
-        .from('chapters')
-        .select('id,title,class_level,sort_order', { count: 'exact' })
-        .order('sort_order', { ascending: true })
-        .range(0, 999);
-    if (error) {
-        console.error('Chapter list failed:', error);
-        uploadChapterSelect.innerHTML = '<option value="">Could not load chapters</option>';
-        throw new Error('Could not load chapters. Please refresh and try again.');
+
+    // Display the exact 14 syllabus chapter names used on the public course page.
+    const courseInfo = COURSES[Number(classLevel)];
+    if (!courseInfo || !Array.isArray(courseInfo.ch)) {
+        uploadChapterSelect.innerHTML = '<option value="">Chapter list unavailable</option>';
+        throw new Error('The syllabus chapter list is unavailable.');
     }
-    const matching = (data || []).filter(ch => Number(ch.class_level) === Number(classLevel));
-    uploadChapterSelect.innerHTML = matching.length
-        ? '<option value="">Select a chapter (' + matching.length + ' available)</option>' + matching.map(ch =>
-            '<option value="' + escapeAdminText(ch.id) + '">Chapter ' + escapeAdminText(ch.sort_order) + ': ' + escapeAdminText(ch.title) + '</option>').join('')
-        : '<option value="">No chapters found for this class</option>';
-    uploadChapterSelect.disabled = matching.length === 0;
-    if (matching.length !== 14) {
-        console.warn('Expected 14 chapters for Class ' + classLevel + ', found ' + matching.length + '. Total rows visible: ' + (count ?? (data || []).length));
+
+    // Match each displayed syllabus chapter to its existing database row by class + order.
+    const { data, error } = await supabaseClient
+        .from('chapters')
+        .select('id,class_level,sort_order,title')
+        .eq('class_level', Number(classLevel))
+        .order('sort_order', { ascending: true })
+        .range(0, 99);
+
+    if (error) {
+        console.error('Chapter ID lookup failed:', error);
+        uploadChapterSelect.innerHTML = '<option value="">Could not load chapter records</option>';
+        throw new Error('Could not load chapter records. Please refresh and try again.');
+    }
+
+    const rowsByOrder = new Map((data || []).map(row => [Number(row.sort_order), row]));
+    uploadChapterSelect.innerHTML = '<option value="">Select a chapter</option>' +
+        courseInfo.ch.map((chapterTitle, index) => {
+            const row = rowsByOrder.get(index + 1);
+            if (!row) {
+                return '<option value="" disabled>Chapter ' + (index + 1) + ': ' + escapeAdminText(chapterTitle) + ' (database record missing)</option>';
+            }
+            return '<option value="' + escapeAdminText(row.id) + '">Chapter ' + (index + 1) + ': ' + escapeAdminText(chapterTitle) + '</option>';
+        }).join('');
+
+    uploadChapterSelect.disabled = !data || data.length === 0;
+    if (!data || data.length !== 14) {
+        console.warn('Class ' + classLevel + ' should have 14 chapter records; found ' + ((data || []).length) + '. The displayed names are from the public course syllabus.');
     }
 }
 
