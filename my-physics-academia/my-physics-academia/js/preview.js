@@ -225,10 +225,9 @@
       player.style.setProperty("--media-object-fit", "contain");
       player.style.setProperty("--media-object-position", "center");
 
-      // Hide the source asset's elapsed/total timestamps. The preview UI below
-      // displays only the duration of the selected clip, not the full Mux asset.
-      player.style.setProperty("--time-display", "none");
-      player.style.setProperty("--duration-display", "none");
+      // Use clip-specific controls instead of Mux's full-asset timeline.
+      player.controls = false;
+      player.removeAttribute("controls");
 
       // Set the signed token BEFORE the playback ID so the first stream request
       // is created with the token already attached.
@@ -263,13 +262,26 @@
           clipFinished = false;
           player.currentTime = clipStart;
         }
+        playButton.textContent = "Ⅱ";
+        playButton.setAttribute("aria-label", "Pause preview");
+      });
+
+      player.addEventListener("pause", () => {
+        playButton.textContent = "▶";
+        playButton.setAttribute("aria-label", "Play preview");
       });
 
       player.addEventListener("timeupdate", () => {
+        const progress = Math.max(0, Math.min(1, (player.currentTime - clipStart) / (clipEnd - clipStart)));
+        progressBar.value = String(Math.round(progress * 100));
+        progressBar.style.setProperty("--clip-progress", (progress * 100) + "%");
+
         if (!clipFinished && player.currentTime >= clipEnd) {
           clipFinished = true;
           player.pause();
           player.currentTime = clipEnd;
+          progressBar.value = "100";
+          progressBar.style.setProperty("--clip-progress", "100%");
           showStatus("Preview finished. This preview has now been used.");
         }
       });
@@ -281,26 +293,78 @@
         clipFinished = true;
         showStatus("Preview finished. This preview has now been used.");
       });
-      const clipDuration = clipEnd - clipStart;
-      const durationLabel = document.createElement("span");
-      durationLabel.className = "preview-clip-duration";
-      durationLabel.textContent = formatDuration(clipDuration);
-      durationLabel.setAttribute("aria-label", "Preview clip duration " + formatDuration(clipDuration));
-      durationLabel.style.cssText = [
-        "position:absolute",
-        "right:56px",
-        "bottom:12px",
-        "z-index:5",
-        "padding:3px 7px",
-        "border-radius:4px",
-        "background:rgba(0,0,0,.72)",
-        "color:#fff",
-        "font-size:12px",
-        "line-height:1.3",
-        "pointer-events:none"
-      ].join(";");
+      const controls = document.createElement("div");
+      controls.className = "preview-custom-controls";
+      controls.style.cssText = "position:absolute;left:0;right:0;bottom:0;z-index:10;display:flex;align-items:center;gap:12px;padding:12px 14px;background:linear-gradient(transparent,rgba(0,0,0,.82));color:#fff";
+      const controlButtonStyle = "border:0;background:transparent;color:#fff;font-size:18px;cursor:pointer;padding:4px 6px;min-width:30px";
+      const playButton = document.createElement("button");
+      playButton.type = "button";
+      playButton.textContent = "▶";
+      playButton.setAttribute("aria-label", "Play preview");
+      playButton.style.cssText = controlButtonStyle;
+      playButton.addEventListener("click", async () => {
+        try {
+          if (player.paused) await player.play();
+          else player.pause();
+        } catch (error) {
+          showStatus("Could not play this preview. Please try again.", true);
+        }
+      });
 
-      playerContainer.replaceChildren(player, durationLabel);
+      const progressBar = document.createElement("input");
+      progressBar.type = "range";
+      progressBar.min = "0";
+      progressBar.max = "100";
+      progressBar.step = "0.1";
+      progressBar.value = "0";
+      progressBar.setAttribute("aria-label", "Preview progress");
+      progressBar.style.cssText = "flex:1;min-width:40px;width:100%;height:5px;margin:0;accent-color:#fff;cursor:pointer;padding:0";
+      progressBar.addEventListener("input", () => {
+        const fraction = Number(progressBar.value) / 100;
+        player.currentTime = clipStart + fraction * (clipEnd - clipStart);
+        clipFinished = false;
+      });
+
+      const volumeButton = document.createElement("button");
+      volumeButton.type = "button";
+      volumeButton.textContent = "🔊";
+      volumeButton.setAttribute("aria-label", "Mute or unmute");
+      volumeButton.style.cssText = controlButtonStyle;
+      volumeButton.addEventListener("click", () => {
+        player.muted = !player.muted;
+        volumeButton.textContent = player.muted ? "🔇" : "🔊";
+      });
+
+      const volumeBar = document.createElement("input");
+      volumeBar.type = "range";
+      volumeBar.min = "0";
+      volumeBar.max = "1";
+      volumeBar.step = "0.05";
+      volumeBar.value = "1";
+      volumeBar.setAttribute("aria-label", "Volume");
+      volumeBar.style.cssText = "width:72px;height:5px;margin:0;padding:0;accent-color:#fff;cursor:pointer";
+      volumeBar.addEventListener("input", () => {
+        player.volume = Number(volumeBar.value);
+        player.muted = player.volume === 0;
+        volumeButton.textContent = player.muted ? "🔇" : "🔊";
+      });
+
+      const fullscreenButton = document.createElement("button");
+      fullscreenButton.type = "button";
+      fullscreenButton.textContent = "⛶";
+      fullscreenButton.setAttribute("aria-label", "Fullscreen");
+      fullscreenButton.style.cssText = controlButtonStyle;
+      fullscreenButton.addEventListener("click", async () => {
+        try {
+          if (!document.fullscreenElement) await playerContainer.requestFullscreen();
+          else await document.exitFullscreen();
+        } catch (_) {
+          showStatus("Fullscreen is not available in this browser.", true);
+        }
+      });
+
+      controls.append(playButton, progressBar, volumeButton, volumeBar, fullscreenButton);
+      playerContainer.replaceChildren(player, controls);
       showStatus("Your preview is ready. Only one video can play at a time.");
     } catch (error) {
       console.error("Preview playback request failed:", error);
