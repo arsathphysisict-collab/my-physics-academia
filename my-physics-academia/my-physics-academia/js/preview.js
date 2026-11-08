@@ -266,18 +266,6 @@
       player.addEventListener("loadedmetadata", enforceClipStart);
       player.addEventListener("canplay", enforceClipStart);
 
-      // Tap/click anywhere on the video surface to toggle playback.
-      // Custom control buttons are separate siblings, so their clicks do not
-      // bubble through this listener.
-      player.addEventListener("click", async () => {
-        try {
-          if (player.paused) await player.play();
-          else player.pause();
-        } catch (_) {
-          showStatus("Could not play this preview. Please try again.", true);
-        }
-      });
-
       player.addEventListener("seeking", () => {
         if (player.currentTime < clipStart) {
           player.currentTime = clipStart;
@@ -390,10 +378,15 @@
       volumeBar.step = "0.05";
       volumeBar.value = "1";
       volumeBar.setAttribute("aria-label", "Volume");
-      volumeBar.style.cssText = "width:72px;height:5px;margin:0;padding:0;accent-color:#fff;cursor:pointer";
+      volumeBar.style.cssText = "width:110px;min-width:75px;height:6px;margin:0;padding:0;accent-color:#fff;cursor:pointer;touch-action:pan-y";
       volumeBar.addEventListener("input", () => {
-        player.volume = Number(volumeBar.value);
-        player.muted = player.volume === 0;
+        const nextVolume = Number(volumeBar.value);
+        player.volume = nextVolume;
+        player.muted = nextVolume === 0;
+        volumeButton.textContent = player.muted ? "🔇" : "🔊";
+      });
+      player.addEventListener("volumechange", () => {
+        volumeBar.value = String(player.muted ? 0 : player.volume);
         volumeButton.textContent = player.muted ? "🔇" : "🔊";
       });
 
@@ -404,15 +397,56 @@
       fullscreenButton.style.cssText = controlButtonStyle;
       fullscreenButton.addEventListener("click", async () => {
         try {
-          if (!document.fullscreenElement) await playerContainer.requestFullscreen();
-          else await document.exitFullscreen();
+          if (!document.fullscreenElement) {
+            await playerContainer.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
         } catch (_) {
           showStatus("Fullscreen is not available in this browser.", true);
         }
       });
 
       controls.append(playButton, progressBar, volumeButton, volumeBar, fullscreenButton);
-      playerContainer.replaceChildren(player, centerPlayButton, controls);
+      const surfaceTap = document.createElement("button");
+      surfaceTap.type = "button";
+      surfaceTap.className = "preview-video-tap-surface";
+      surfaceTap.setAttribute("aria-label", "Play or pause preview");
+      surfaceTap.style.cssText = "position:absolute;inset:0;z-index:8;border:0;padding:0;margin:0;background:transparent;cursor:pointer";
+      surfaceTap.addEventListener("click", async () => {
+        try {
+          if (player.paused) await player.play();
+          else player.pause();
+        } catch (_) {
+          showStatus("Could not play this preview. Please try again.", true);
+        }
+      });
+
+      // Keep the top-right Mux rendition selector reachable above the tap layer.
+      // The main video surface and centered play button remain tap-to-toggle.
+      playerContainer.style.position = "relative";
+      playerContainer.replaceChildren(player, surfaceTap, centerPlayButton, controls);
+      playerContainer.addEventListener("fullscreenchange", () => {
+        if (document.fullscreenElement === playerContainer) {
+          playerContainer.style.width = "100vw";
+          playerContainer.style.height = "100vh";
+          playerContainer.style.aspectRatio = "auto";
+          playerContainer.style.borderRadius = "0";
+          playerContainer.style.background = "#000";
+          player.style.width = "100%";
+          player.style.height = "100%";
+          player.style.inset = "0";
+          player.style.setProperty("--media-object-fit", "contain");
+        } else {
+          playerContainer.style.width = "";
+          playerContainer.style.height = "";
+          playerContainer.style.aspectRatio = "";
+          playerContainer.style.borderRadius = "";
+          playerContainer.style.background = "";
+          player.style.width = "100%";
+          player.style.height = "100%";
+        }
+      });
       showStatus("Your preview is ready. Only one video can play at a time.");
     } catch (error) {
       console.error("Preview playback request failed:", error);
