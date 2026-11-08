@@ -225,6 +225,11 @@
       player.style.setProperty("--media-object-fit", "contain");
       player.style.setProperty("--media-object-position", "center");
 
+      // Hide the source asset's elapsed/total timestamps. The preview UI below
+      // displays only the duration of the selected clip, not the full Mux asset.
+      player.style.setProperty("--time-display", "none");
+      player.style.setProperty("--duration-display", "none");
+
       // Set the signed token BEFORE the playback ID so the first stream request
       // is created with the token already attached.
       player.playbackToken = data.token;
@@ -250,6 +255,16 @@
         }
       });
 
+      // If the viewer presses Play again after reaching the clip end,
+      // restart at the selected clip's start instead of continuing into the
+      // unused part of the original Mux asset.
+      player.addEventListener("play", () => {
+        if (player.currentTime >= clipEnd - 0.05) {
+          clipFinished = false;
+          player.currentTime = clipStart;
+        }
+      });
+
       player.addEventListener("timeupdate", () => {
         if (!clipFinished && player.currentTime >= clipEnd) {
           clipFinished = true;
@@ -266,7 +281,26 @@
         clipFinished = true;
         showStatus("Preview finished. This preview has now been used.");
       });
-      playerContainer.replaceChildren(player);
+      const clipDuration = clipEnd - clipStart;
+      const durationLabel = document.createElement("span");
+      durationLabel.className = "preview-clip-duration";
+      durationLabel.textContent = formatDuration(clipDuration);
+      durationLabel.setAttribute("aria-label", "Preview clip duration " + formatDuration(clipDuration));
+      durationLabel.style.cssText = [
+        "position:absolute",
+        "right:56px",
+        "bottom:12px",
+        "z-index:5",
+        "padding:3px 7px",
+        "border-radius:4px",
+        "background:rgba(0,0,0,.72)",
+        "color:#fff",
+        "font-size:12px",
+        "line-height:1.3",
+        "pointer-events:none"
+      ].join(";");
+
+      playerContainer.replaceChildren(player, durationLabel);
       showStatus("Your preview is ready. Only one video can play at a time.");
     } catch (error) {
       console.error("Preview playback request failed:", error);
