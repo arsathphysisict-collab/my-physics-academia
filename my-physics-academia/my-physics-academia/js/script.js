@@ -802,10 +802,161 @@ if (uploadVideoForm) uploadVideoForm.addEventListener('submit', async (event) =>
 $$('.tabs button').forEach(b=>b.addEventListener('click',()=>{$$('.tabs button').forEach(x=>x.classList.remove('on'));$$('.pane').forEach(x=>x.classList.remove('on'));b.classList.add('on');const pane=document.getElementById(b.dataset.pane);if(pane)pane.classList.add('on');}));
 $$('.drop').forEach(dz=>{['dragover','dragenter'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.add('hot')}));['dragleave','drop'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.remove('hot');if(v==='drop')toast('Demo only: file not uploaded')}))});
 $$('form').forEach(f => {
-    if (!['admin-login-form', 'add-course-form', 'add-lesson-form', 'upload-video-form'].includes(f.id)) {
+    if (!['admin-login-form', 'add-course-form', 'add-lesson-form', 'upload-video-form', 'mux-asset-upload-form'].includes(f.id)) {
         f.onsubmit = e => {
             e.preventDefault();
             toast('Demo only: nothing was submitted');
         };
     }
+});
+
+
+// Mux Asset Library: separate upload flow; the existing concept upload remains unchanged.
+const muxAssetForm = document.getElementById('mux-asset-upload-form');
+const muxAssetFile = document.getElementById('mux-asset-file');
+
+async function loadMuxAssetLibrary() {
+    const list = document.getElementById('mux-asset-list');
+    const status = document.getElementById('mux-asset-list-status');
+    if (!list || typeof supabaseClient === 'undefined') return;
+
+    status.textContent = 'Loading assets...';
+    list.replaceChildren();
+
+    const { data, error } = await supabaseClient
+        .from('mux_assets')
+        .select('id,original_filename,mux_status,duration_seconds,created_at')
+        .order('created_at', { ascending: false })
+        .range(0, 499);
+
+    if (error) {
+        console.error('Mux Asset Library load failed:', error);
+        status.textContent = 'Could not load assets: ' + error.message;
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        status.textContent = 'No assets in the library yet.';
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 4;
+        cell.textContent = 'No assets uploaded yet.';
+        row.appendChild(cell);
+        list.appendChild(row);
+        return;
+    }
+
+    status.textContent = data.length + ' asset(s) found.';
+    data.forEach(asset => {
+        const row = document.createElement('tr');
+        const filename = document.createElement('td');
+        const assetStatus = document.createElement('td');
+        const duration = document.createElement('td');
+        const created = document.createElement('td');
+
+        filename.textContent = asset.original_filename || 'Unnamed video';
+        assetStatus.textContent = asset.mux_status || 'Unknown';
+        duration.textContent = Number.isFinite(Number(asset.duration_seconds))
+            ? (asset.duration_seconds + ' sec')
+            : '—';
+        created.textContent = asset.created_at
+            ? new Date(asset.created_at).toLocaleString()
+            : '—';
+
+        row.append(filename, assetStatus, duration, created);
+        list.appendChild(row);
+    });
+}
+
+if (muxAssetForm) {
+    muxAssetForm.addEventListener('submit', async event => {
+        event.preventDefault();
+
+        const errorBox = document.getElementById('mux-asset-error');
+        const button = document.getElementById('mux-asset-upload-button');
+        const progressWrap = document.getElementById('mux-asset-progress-wrap');
+        const progress = document.getElementById('mux-asset-progress');
+        const percent = document.getElementById('mux-asset-percent');
+        const status = document.getElementById('mux-asset-status');
+        const file = muxAssetFile.files && muxAssetFile.files[0];
+
+        errorBox.textContent = '';
+        if (!file || !file.type.startsWith('video/')) {
+            errorBox.textContent = 'Please choose a valid video file.';
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Preparing...';
+        progressWrap.style.display = 'block';
+        progress.value = 0;
+        percent.textContent = '0%';
+        status.textContent = 'Checking admin session...';
+
+        try {
+            const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+            if (authError || !authData.user) {
+                throw new Error('Your login session has expired. Please log in again.');
+            }
+
+            status.textContent = 'Creating secure Mux upload...';
+            const { data: uploadData, error: functionError } =
+                await supabaseClient.functions.invoke('create-mux-asset-upload', {
+                    body: { originalFilename: file.name }
+                });
+
+            if (functionError) throw new Error(functionError.message || 'Could not create Mux upload.');
+            if (!uploadData || !uploadData.uploadUrl || !uploadData.uploadId) {
+                throw new Error((uploadData && uploadData.error) || 'Mux did not return a valid upload link.');
+            }
+
+            status.textContent = 'Uploading video to Mux...';
+            button.textContent = 'Uploading...';
+
+            await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', uploadData.uploadUrl, true);
+                xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+                xhr.upload.onprogress = event => {
+                    if (event.lengthComputable) {
+                        const value = Math.round((event.loaded / event.total) * 100);
+                        progress.value = value;
+                        percent.textContent = value + '%';
+                    }
+                };
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) resolve();
+                    else reject(new Error('Mux upload failed (HTTP ' + xhr.status + ').'));
+                };
+                xhr.onerror = () => reject(new Error('Network error while uploading. Check your connection.'));
+                xhr.onabort = () => reject(new Error('Upload was cancelled.'));
+                xhr.send(file);
+            });
+
+            progress.value = 100;
+            percent.textContent = '100%';
+            status.textContent = 'Upload complete. Mux is processing the video.';
+            toast('Asset uploaded. Mux is processing it.');
+            muxAssetForm.reset();
+            await loadMuxAssetLibrary();
+        } catch (error) {
+            console.error('Mux Asset Library upload failed:', error);
+            errorBox.textContent = error.message || 'Asset upload failed.';
+            status.textContent = 'Upload did not complete.';
+            toast('Asset upload failed.');
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Upload to Asset Library';
+        }
+    });
+}
+
+const refreshMuxAssetsButton = document.getElementById('refresh-mux-assets');
+if (refreshMuxAssetsButton) {
+    refreshMuxAssetsButton.addEventListener('click', loadMuxAssetLibrary);
+}
+
+// Load the library when its dashboard tab is opened.
+document.querySelectorAll('.tabs button[data-pane="ma"]').forEach(button => {
+    button.addEventListener('click', loadMuxAssetLibrary);
 });
