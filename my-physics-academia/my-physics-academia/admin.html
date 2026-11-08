@@ -72,7 +72,7 @@
 <div id="ml" class="pane card tw">
 <div class="row" style="align-items:center;gap:10px;margin-bottom:16px"><strong>Choose Class:</strong><button type="button" class="btn" data-manage-class="11" aria-pressed="true">Class 11</button><button type="button" class="btn o" data-manage-class="12" aria-pressed="false">Class 12</button></div>
 <div class="row" style="align-items:center;gap:10px;margin:0 0 16px"><button type="button" class="btn" data-manage-video-tab="pending" aria-pressed="true">Pending Uploads</button><button type="button" class="btn o" data-manage-video-tab="uploaded" aria-pressed="false">Uploaded Videos</button></div>
-<section id="pending-uploads-section"><h3>Pending Uploads</h3><p>Concepts without a video upload are listed here.</p><table><thead><tr><th>Concept Name</th><th>Class &amp; Chapter</th><th>Lesson</th><th>Status</th><th>Action</th></tr></thead><tbody id="pending-upload-list"><tr><td colspan="5">Loading pending uploads...</td></tr></tbody></table></section>
+<section id="pending-uploads-section"><h3>Pending Uploads</h3><p>Chapters and lessons without an uploaded video are listed here.</p><table><thead><tr><th>Class &amp; Chapter</th><th>Lesson</th><th>Status</th><th>Action</th></tr></thead><tbody id="pending-upload-list"><tr><td colspan="4">Loading pending uploads...</td></tr></tbody></table></section>
 <section id="uploaded-videos-section" hidden><h3>Uploaded Videos</h3><table><thead><tr><th>Concept Name</th><th>Class &amp; Chapter</th><th>Lesson</th><th>Video Status</th><th>Publish Status</th><th>Video Thumbnail &amp; Preview Placement</th><th>Action</th></tr></thead><tbody id="admin-lessons-list"><tr><td colspan="7">Loading uploaded videos...</td></tr></tbody></table></section>
 </div>
 <div id="up" class="pane card">
@@ -82,8 +82,7 @@
 <label>Select Class<select id="upload-class-select" required><option value="">Select class</option><option value="11">Class 11</option><option value="12">Class 12</option></select></label>
 <label>Select Chapter<select id="upload-chapter-select" required disabled><option value="">Select a class first</option></select></label>
 <label>Select Lesson<select id="upload-lesson-select" required disabled><option value="">Select a chapter first</option></select></label>
-<label>Existing Pending Concept (optional)<select id="upload-pending-concept-select" disabled><option value="">Choose a lesson first or create a new concept below</option></select></label>
-<label>New Concept Name (leave empty when selecting an existing concept)<input type="text" id="upload-concept-title" maxlength="180" placeholder="Example: Newton's First Law"></label>
+<label>Concept Name<input type="text" id="upload-concept-title" maxlength="180" placeholder="Example: Newton's First Law" required></label>
 <label>Choose Video File<input type="file" id="lesson-video-file" accept="video/*" required></label>
 <p id="upload-video-error" style="color:red" role="alert"></p>
 <div id="upload-progress-wrap" style="display:none;margin:14px 0"><div style="display:flex;justify-content:space-between"><span id="upload-status">Preparing upload...</span><span id="upload-percent">0%</span></div><progress id="upload-progress" value="0" max="100" style="width:100%"></progress></div>
