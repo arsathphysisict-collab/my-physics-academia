@@ -72,11 +72,11 @@
 <div id="ml" class="pane card tw"><table><thead><tr><th>Concept Name</th><th>Class &amp; Chapter</th><th>Category</th><th>Video Status</th><th>Publish Status</th><th>Video Thumbnail &amp; Preview Placement</th><th>Action</th></tr></thead><tbody id="admin-lessons-list"><tr><td colspan="7">Loading concepts...</td></tr></tbody></table></div>
 <div id="up" class="pane card">
 <h2>Upload Concept Video</h2>
-<p>Choose the class, chapter and lesson category. Then enter the concept name and upload its video directly to Mux.</p>
+<p>Choose the class, chapter and lesson. Then enter the concept name and upload its video directly to Mux.</p>
 <form id="upload-video-form">
 <label>Select Class<select id="upload-class-select" required><option value="">Select class</option><option value="11">Class 11</option><option value="12">Class 12</option></select></label>
 <label>Select Chapter<select id="upload-chapter-select" required disabled><option value="">Select a class first</option></select></label>
-<label>Lesson Category<select id="upload-category-select" required><option value="">Select category</option><option value="Core Concepts">Core Concepts</option><option value="Derivations &amp; Laws">Derivations &amp; Laws</option><option value="Solved Numericals">Solved Numericals</option><option value="Chapter Recap Quiz">Chapter Recap Quiz</option></select></label>
+<label>Select Lesson<select id="upload-lesson-select" required disabled><option value="">Select a chapter first</option></select></label>
 <label>Concept Name<input type="text" id="upload-concept-title" maxlength="180" placeholder="Example: Newton's First Law" required></label>
 <label>Choose Video File<input type="file" id="lesson-video-file" accept="video/*" required></label>
 <p id="upload-video-error" style="color:red" role="alert"></p>
