@@ -225,12 +225,29 @@
       player.style.setProperty("--media-object-fit", "contain");
       player.style.setProperty("--media-object-position", "center");
 
-      // Use clip-specific controls instead of Mux's full-asset timeline.
+      // Keep Mux's rendition menu available, but hide its native timeline
+      // and duplicate controls. The custom clip timeline remains below.
       player.controls = false;
       player.removeAttribute("controls");
-      // Mux renders its own controls independently of the custom HTML controls.
-      // Hide the entire built-in control UI to prevent a second progress bar.
-      player.style.setProperty("--controls", "none");
+      [
+        "--play-button",
+        "--center-controls",
+        "--time-range",
+        "--time-display",
+        "--duration-display",
+        "--mute-button",
+        "--volume-range",
+        "--fullscreen-button",
+        "--pip-button",
+        "--captions-button",
+        "--airplay-button",
+        "--cast-button",
+        "--playback-rate-button",
+        "--seek-backward-button",
+        "--seek-forward-button"
+      ].forEach(variable => player.style.setProperty(variable, "none"));
+      // Leave --rendition-menu-button enabled so supported browsers can show
+      // Mux's native resolution selector.
 
       // Set the signed token BEFORE the playback ID so the first stream request
       // is created with the token already attached.
@@ -248,6 +265,18 @@
 
       player.addEventListener("loadedmetadata", enforceClipStart);
       player.addEventListener("canplay", enforceClipStart);
+
+      // Tap/click anywhere on the video surface to toggle playback.
+      // Custom control buttons are separate siblings, so their clicks do not
+      // bubble through this listener.
+      player.addEventListener("click", async () => {
+        try {
+          if (player.paused) await player.play();
+          else player.pause();
+        } catch (_) {
+          showStatus("Could not play this preview. Please try again.", true);
+        }
+      });
 
       player.addEventListener("seeking", () => {
         if (player.currentTime < clipStart) {
