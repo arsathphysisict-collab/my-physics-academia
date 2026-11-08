@@ -228,6 +228,9 @@
       // Use clip-specific controls instead of Mux's full-asset timeline.
       player.controls = false;
       player.removeAttribute("controls");
+      // Mux renders its own controls independently of the custom HTML controls.
+      // Hide the entire built-in control UI to prevent a second progress bar.
+      player.style.setProperty("--controls", "none");
 
       // Set the signed token BEFORE the playback ID so the first stream request
       // is created with the token already attached.
