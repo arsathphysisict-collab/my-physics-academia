@@ -74,26 +74,24 @@ async function loadAdminDashboardData() {
         if (!adminRecord) throw new Error('This account is not registered as an admin.');
 
         const [
-            { data: courses, error: coursesError, count: courseCount },
             { data: concepts, error: conceptsError, count: conceptCount },
             { data: chapters, error: chaptersError }
         ] = await Promise.all([
-            supabaseClient.from('courses').select('id,title,class_level,is_published', { count: 'exact' }).order('created_at', { ascending: false }),
             supabaseClient.from('concepts').select('id,title,chapter_id,category,is_published,mux_status,sort_order', { count: 'exact' }).order('created_at', { ascending: false }),
             supabaseClient.from('chapters').select('id,title,class_level,sort_order').order('class_level', { ascending: true }).order('sort_order', { ascending: true }).range(0, 999)
         ]);
 
-        if (coursesError) throw coursesError;
         if (conceptsError) throw conceptsError;
         if (chaptersError) throw chaptersError;
 
-        if (coursesCount) coursesCount.textContent = courseCount ?? courses.length;
+        // The two official class courses come from the public syllabus, not legacy test rows.
+        if (coursesCount) coursesCount.textContent = Object.keys(COURSES).length;
         if (lessonsCount) lessonsCount.textContent = conceptCount ?? concepts.length;
 
         if (coursesBody) {
-            coursesBody.innerHTML = courses && courses.length
-                ? courses.map(course => '<tr><td>' + escapeAdminText(course.title) + '</td><td>Class ' + escapeAdminText(course.class_level) + '</td><td>' + (course.is_published ? 'Published' : 'Draft') + '</td></tr>').join('')
-                : '<tr><td colspan="3">No courses found.</td></tr>';
+            coursesBody.innerHTML = Object.entries(COURSES).map(([classLevel, course]) =>
+                '<tr><td>' + escapeAdminText(course.t) + '</td><td>Class ' + escapeAdminText(classLevel) + '</td><td>Active</td></tr>'
+            ).join('');
         }
 
         const chapterMap = new Map((chapters || []).map(ch => [ch.id, ch]));
