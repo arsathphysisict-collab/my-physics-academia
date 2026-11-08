@@ -118,13 +118,21 @@
         throw new Error((data && data.error) || "Preview lessons could not be loaded.");
       }
 
-      if (data.previews.length === 0) {
-        showStatus("Preview lessons will be available here soon.");
+      // When opened from a specific course, show previews for that class only.
+      const requestedClass = new URLSearchParams(window.location.search).get("class");
+      const previews = requestedClass === "11" || requestedClass === "12"
+        ? data.previews.filter(video => String((video.chapter || {}).class_level) === requestedClass)
+        : data.previews;
+
+      if (previews.length === 0) {
+        showStatus(requestedClass
+          ? "Preview lessons for Class " + requestedClass + " will be available here soon."
+          : "Preview lessons will be available here soon.");
         return;
       }
 
       const watched = getWatchedIds();
-      data.previews.forEach((video, index) => {
+      previews.forEach((video, index) => {
         listElement.appendChild(createPreviewButton(video, index, watched.has(video.id)));
       });
       showStatus("Choose any available preview lesson. Each preview can be started once in this browser.");
