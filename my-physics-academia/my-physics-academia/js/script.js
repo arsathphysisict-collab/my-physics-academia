@@ -105,7 +105,7 @@ async function loadAdminDashboardData() {
                     const previewValue = concept.is_preview ? String(concept.preview_order || '') : '';
                     const previewOptions = [['', 'Not a Preview'], ['1', 'Preview Slot 1'], ['2', 'Preview Slot 2'], ['3', 'Preview Slot 3']]
                         .map(([value, label]) => '<option value="' + value + '" ' + (previewValue === value ? 'selected' : '') + '>' + label + '</option>').join('');
-                    return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td><td>' + (concept.is_published ? 'Published' : 'Draft') + '</td><td><select data-preview-setting="' + escapeAdminText(concept.id) + '" aria-label="Preview status and slot" style="max-width:150px;font-size:12px;margin-bottom:6px">' + previewOptions + '</select>' + (concept.is_preview ? (concept.thumbnail_url ? '<img src="' + escapeAdminText(concept.thumbnail_url) + '" alt="Current preview thumbnail" style="width:76px;height:44px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px">' : '<span style="display:block;font-size:12px;margin-bottom:6px">No thumbnail set</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-thumbnail-upload="' + escapeAdminText(concept.id) + '" aria-label="Upload preview thumbnail" style="max-width:180px;font-size:12px">' : '<span style="display:block;color:#667085;font-size:12px">Choose a Preview Slot to enable thumbnail upload</span>') + '</td><td><button type="button" class="btn ' + (concept.is_published ? 'o' : '') + '" data-publish-concept="' + escapeAdminText(concept.id) + '" data-published="' + (concept.is_published ? 'true' : 'false') + '" ' + (concept.mux_status === 'ready' ? '' : 'disabled title="Video must be ready before publishing"') + '>' + (concept.is_published ? 'Unpublish' : 'Publish') + '</button></td></tr>';
+                    return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td><td>' + (concept.is_published ? 'Published' : 'Draft') + '</td><td>' + (concept.thumbnail_url ? '<img src="' + escapeAdminText(concept.thumbnail_url) + '" alt="Current video thumbnail" style="width:76px;height:44px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px">' : '<span style="display:block;font-size:12px;margin-bottom:6px">No thumbnail set</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-thumbnail-upload="' + escapeAdminText(concept.id) + '" aria-label="Upload video thumbnail" style="max-width:180px;font-size:12px"><div style="margin-top:8px"><label style="display:block;font-size:11px;margin-bottom:3px">Preview placement</label><select data-preview-setting="' + escapeAdminText(concept.id) + '" aria-label="Preview status and slot" style="max-width:150px;font-size:12px">' + previewOptions + '</select></div></td><td><button type="button" class="btn ' + (concept.is_published ? 'o' : '') + '" data-publish-concept="' + escapeAdminText(concept.id) + '" data-published="' + (concept.is_published ? 'true' : 'false') + '" ' + (concept.mux_status === 'ready' ? '' : 'disabled title="Video must be ready before publishing"') + '>' + (concept.is_published ? 'Unpublish' : 'Publish') + '</button></td></tr>';
                   }).join('')
                 : '<tr><td colspan="6">No concepts uploaded yet. Add a concept using Upload Interface.</td></tr>';
         }
@@ -194,11 +194,11 @@ async function loadAdminDashboardData() {
                     const { error: updateError } = await supabaseClient
                         .from('concepts').update({ thumbnail_url: thumbnailUrl }).eq('id', conceptId);
                     if (updateError) throw updateError;
-                    toast('Preview thumbnail saved successfully.');
+                    toast('Video thumbnail saved successfully.');
                     await loadAdminDashboardData();
                 } catch (error) {
-                    console.error('Preview thumbnail upload failed:', error);
-                    toast(error.message || 'Could not upload the thumbnail.');
+                    console.error('Video thumbnail upload failed:', error);
+                    toast(error.message || 'Could not upload the video thumbnail.');
                     input.disabled = false;
                     input.value = '';
                 }
