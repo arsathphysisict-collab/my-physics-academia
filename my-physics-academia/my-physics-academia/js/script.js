@@ -856,7 +856,7 @@ async function loadMuxAssetLibrary() {
 
         filename.textContent = asset.original_filename || 'Unnamed video';
         assetStatus.textContent = asset.mux_status || 'Unknown';
-        duration.textContent = Number.isFinite(Number(asset.duration_seconds))
+        duration.textContent = asset.duration_seconds !== null && asset.duration_seconds !== undefined
             ? (asset.duration_seconds + ' sec')
             : '—';
         created.textContent = asset.created_at
