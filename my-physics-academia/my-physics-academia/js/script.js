@@ -115,9 +115,10 @@ async function loadAdminDashboardData() {
 }
 
 
-        if (lessonsBody && !lessonsBody.dataset.publishHandlerAttached) {
-            lessonsBody.dataset.publishHandlerAttached = 'true';
-            lessonsBody.addEventListener('click', async (event) => {
+        const manageLessonsBody = document.getElementById('admin-lessons-list');
+        if (manageLessonsBody && !manageLessonsBody.dataset.publishHandlerAttached) {
+            manageLessonsBody.dataset.publishHandlerAttached = 'true';
+            manageLessonsBody.addEventListener('click', async (event) => {
                 const publishButton = event.target.closest('[data-publish-concept]');
                 if (!publishButton || publishButton.disabled) return;
                 const conceptId = publishButton.dataset.publishConcept;
