@@ -185,9 +185,17 @@
       const player = document.createElement("mux-player");
       player.setAttribute("stream-type", "on-demand");
       player.setAttribute("playsinline", "");
+      // Keep the Mux element inside the fixed 16:9 player frame.
+      // Portrait videos remain centered with side space instead of showing
+      // their own tall aspect-ratio box outside the player.
+      player.style.position = "absolute";
+      player.style.inset = "0";
       player.style.width = "100%";
-      player.style.aspectRatio = "16 / 9";
+      player.style.height = "100%";
+      player.style.aspectRatio = "auto";
       player.style.display = "block";
+      player.style.setProperty("--media-object-fit", "contain");
+      player.style.setProperty("--media-object-position", "center");
 
       // Set the signed token BEFORE the playback ID so the first stream request
       // is created with the token already attached.
