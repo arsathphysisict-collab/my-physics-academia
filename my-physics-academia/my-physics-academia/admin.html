@@ -82,7 +82,8 @@
 <label>Select Class<select id="upload-class-select" required><option value="">Select class</option><option value="11">Class 11</option><option value="12">Class 12</option></select></label>
 <label>Select Chapter<select id="upload-chapter-select" required disabled><option value="">Select a class first</option></select></label>
 <label>Select Lesson<select id="upload-lesson-select" required disabled><option value="">Select a chapter first</option></select></label>
-<label>Concept Name<input type="text" id="upload-concept-title" maxlength="180" placeholder="Example: Newton's First Law" required></label>
+<label>Existing Pending Concept (optional)<select id="upload-pending-concept-select" disabled><option value="">Choose a lesson first or create a new concept below</option></select></label>
+<label>New Concept Name (leave empty when selecting an existing concept)<input type="text" id="upload-concept-title" maxlength="180" placeholder="Example: Newton's First Law"></label>
 <label>Choose Video File<input type="file" id="lesson-video-file" accept="video/*" required></label>
 <p id="upload-video-error" style="color:red" role="alert"></p>
 <div id="upload-progress-wrap" style="display:none;margin:14px 0"><div style="display:flex;justify-content:space-between"><span id="upload-status">Preparing upload...</span><span id="upload-percent">0%</span></div><progress id="upload-progress" value="0" max="100" style="width:100%"></progress></div>
