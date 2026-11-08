@@ -29,6 +29,22 @@ if($('#course-detail')){const n=new URLSearchParams(location.search).get('class'
 let cur=0;function sel(i){const all=$$('.rel a');if(!all.length)return;cur=(i+all.length)%all.length;all.forEach(x=>x.classList.remove('on'));const a=all[cur];a.classList.add('on');$('#l-title').textContent=a.dataset.t;$('#l-desc').textContent=a.dataset.d;$('#l-ch').textContent=a.dataset.c}
 $$('.rel a').forEach((a,i)=>a.onclick=e=>{e.preventDefault();sel(i)});
 $('#prev')&&($('#prev').onclick=()=>sel(cur-1));$('#next')&&($('#next').onclick=()=>sel(cur+1));
+// Manage Lessons class filter (keeps Class 11 and Class 12 separate).
+window.selectedManageClassLevel = 11;
+document.addEventListener('click', event => {
+    const button = event.target.closest('[data-manage-class]');
+    if (!button) return;
+    window.selectedManageClassLevel = Number(button.dataset.manageClass);
+    document.querySelectorAll('[data-manage-class]').forEach(item => {
+        const active = Number(item.dataset.manageClass) === window.selectedManageClassLevel;
+        item.classList.toggle('o', !active);
+        item.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (typeof window.renderAdminLessonsForClass === 'function') {
+        window.renderAdminLessonsForClass(window.selectedManageClassLevel);
+    }
+});
+
 // Supabase admin-page session handling
 const loginForm = document.getElementById('admin-login-form');
 const loginSection = document.getElementById('login');
@@ -119,35 +135,51 @@ async function loadAdminDashboardData() {
             return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(lessonTitle) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td><td>' + (concept.is_published ? 'Published' : 'Draft') + '</td><td>' + (concept.thumbnail_url ? '<img src="' + escapeAdminText(concept.thumbnail_url) + '" alt="Current video thumbnail" style="width:76px;height:44px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px">' : '<span style="display:block;font-size:12px;margin-bottom:6px">No thumbnail set</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-thumbnail-upload="' + escapeAdminText(concept.id) + '" aria-label="Upload video thumbnail" style="max-width:180px;font-size:12px"><div style="margin-top:8px"><label style="display:block;font-size:11px;margin-bottom:3px">Preview placement</label><select data-preview-setting="' + escapeAdminText(concept.id) + '" aria-label="Preview status and slot" style="max-width:150px;font-size:12px">' + previewOptions + '</select></div></td><td><button type="button" class="btn ' + (concept.is_published ? 'o' : '') + '" data-publish-concept="' + escapeAdminText(concept.id) + '" data-published="' + (concept.is_published ? 'true' : 'false') + '" ' + (concept.mux_status === 'ready' ? '' : 'disabled title="Video must be ready before publishing"') + '>' + (concept.is_published ? 'Unpublish' : 'Publish') + '</button></td></tr>';
         }
 
-        if (lessonsBody) {
+        window.renderAdminLessonsForClass = function (classLevel) {
             const rows = [];
-            (lessons || []).forEach(lesson => {
-                const chapter = chapterMap.get(lesson.chapter_id);
-                const chapterLabel = chapter
-                    ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + ((COURSES[Number(chapter.class_level)] && COURSES[Number(chapter.class_level)].ch[Number(chapter.sort_order) - 1]) || chapter.title)
-                    : 'Chapter unavailable';
-                const lessonConcepts = conceptsByLesson.get(lesson.id) || [];
-                rows.push('<tr><td colspan="7" style="background:var(--surface,#f3f5f7);font-weight:700;padding:12px">' + escapeAdminText(chapterLabel) + ' — ' + escapeAdminText(lesson.title) + ' <span style="font-weight:400">(' + lessonConcepts.length + ' concepts)</span></td></tr>');
-                if (lessonConcepts.length) {
-                    lessonConcepts.forEach(concept => rows.push(renderConceptRow(concept, chapterLabel, lesson.title)));
-                } else {
-                    rows.push('<tr><td colspan="7" style="color:#777">No concepts in this lesson yet.</td></tr>');
-                }
+            const selectedChapters = (chapters || [])
+                .filter(chapter => Number(chapter.class_level) === Number(classLevel))
+                .sort((a, b) => Number(a.sort_order) - Number(b.sort_order));
+
+            selectedChapters.forEach(chapter => {
+                const chapterLabel = 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' +
+                    ((COURSES[Number(chapter.class_level)] && COURSES[Number(chapter.class_level)].ch[Number(chapter.sort_order) - 1]) || chapter.title);
+                const chapterLessons = (lessons || [])
+                    .filter(lesson => lesson.chapter_id === chapter.id)
+                    .sort((a, b) => Number(a.sort_order) - Number(b.sort_order));
+
+                chapterLessons.forEach(lesson => {
+                    const lessonConcepts = conceptsByLesson.get(lesson.id) || [];
+                    rows.push('<tr><td colspan="7" style="background:var(--surface,#f3f5f7);font-weight:700;padding:12px">' +
+                        escapeAdminText(chapterLabel) + ' — ' + escapeAdminText(lesson.title) +
+                        ' <span style="font-weight:400">(' + lessonConcepts.length + ' concepts)</span></td></tr>');
+                    if (lessonConcepts.length) {
+                        lessonConcepts.forEach(concept => rows.push(renderConceptRow(concept, chapterLabel, lesson.title)));
+                    } else {
+                        rows.push('<tr><td colspan="7" style="color:#777">No concepts in this lesson yet.</td></tr>');
+                    }
+                });
             });
 
-            if (unassignedConcepts.length) {
+            const classUnassigned = unassignedConcepts.filter(concept => {
+                const chapter = chapterMap.get(concept.chapter_id);
+                return chapter && Number(chapter.class_level) === Number(classLevel);
+            });
+            if (classUnassigned.length) {
                 rows.push('<tr><td colspan="7" style="background:var(--surface,#f3f5f7);font-weight:700;padding:12px">Unassigned / Legacy Concepts</td></tr>');
-                unassignedConcepts.forEach(concept => {
+                classUnassigned.forEach(concept => {
                     const chapter = chapterMap.get(concept.chapter_id);
-                    const chapterLabel = chapter ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + chapter.title : 'Legacy record';
+                    const chapterLabel = 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + chapter.title;
                     rows.push(renderConceptRow(concept, chapterLabel, 'Not assigned'));
                 });
             }
 
             lessonsBody.innerHTML = rows.length
                 ? rows.join('')
-                : '<tr><td colspan="7">No lessons found. Check the chapter lesson records.</td></tr>';
-        }
+                : '<tr><td colspan="7">No lessons found for Class ' + escapeAdminText(classLevel) + '.</td></tr>';
+        };
+
+        if (lessonsBody) window.renderAdminLessonsForClass(window.selectedManageClassLevel || 11);
     } catch (error) {
         console.error('Admin dashboard data load failed:', error);
         if (coursesBody) coursesBody.innerHTML = '<tr><td colspan="3">Could not load courses. Please refresh.</td></tr>';
