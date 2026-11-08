@@ -32,25 +32,22 @@ $('#prev')&&($('#prev').onclick=()=>sel(cur-1));$('#next')&&($('#next').onclick=
 // Manage Lessons class filter (keeps Class 11 and Class 12 separate).
 window.selectedManageClassLevel = 11;
 document.addEventListener('click', async event => {
-    const pendingUploadButton = event.target.closest('[data-upload-pending]');
-    if (pendingUploadButton) {
+    const pendingLessonButton = event.target.closest('[data-upload-lesson]');
+    if (pendingLessonButton) {
         try {
             const uploadTabButton = document.querySelector('[data-pane="up"]');
             if (uploadTabButton) uploadTabButton.click();
             const classSelect = document.getElementById('upload-class-select');
             const chapterSelect = document.getElementById('upload-chapter-select');
             const lessonSelect = document.getElementById('upload-lesson-select');
-            const pendingSelect = document.getElementById('upload-pending-concept-select');
-            classSelect.value = pendingUploadButton.dataset.classLevel;
+            classSelect.value = pendingLessonButton.dataset.classLevel;
             await loadUploadChapters(classSelect.value);
-            chapterSelect.value = pendingUploadButton.dataset.chapterId;
+            chapterSelect.value = pendingLessonButton.dataset.chapterId;
             await loadUploadLessons(chapterSelect.value);
-            lessonSelect.value = pendingUploadButton.dataset.lessonId;
-            await loadPendingConceptsForLesson(lessonSelect.value);
-            pendingSelect.value = pendingUploadButton.dataset.uploadPending;
-            pendingSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            lessonSelect.value = pendingLessonButton.dataset.lessonId;
+            document.getElementById('upload-concept-title').focus();
         } catch (error) {
-            toast(error.message || 'Could not prepare the pending video upload.');
+            toast(error.message || 'Could not prepare the selected lesson for upload.');
         }
         return;
     }
@@ -183,24 +180,7 @@ async function loadAdminDashboardData() {
 
             const isUploaded = concept => {
                 const status = String(concept.mux_status || '').toLowerCase();
-                // Only a real Mux asset (or a confirmed ready state) counts as an uploaded video.
-                // Upload IDs and in-progress states alone must remain in Pending Uploads.
                 return status === 'ready' && Boolean(concept.mux_playback_id);
-            };
-
-            const addConceptToList = (concept, chapterLabel, lessonTitle) => {
-                if (isUploaded(concept)) {
-                    uploadedRows.push(renderConceptRow(concept, chapterLabel, lessonTitle));
-                } else {
-                    pendingRows.push('<tr><td>' + escapeAdminText(concept.title) + '</td><td>' +
-                        escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(lessonTitle) +
-                        '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') +
-                        '</td><td><button type="button" class="btn" data-upload-pending="' + escapeAdminText(concept.id) +
-                        '" data-class-level="' + escapeAdminText(classLevel) +
-                        '" data-chapter-id="' + escapeAdminText(concept.chapter_id) +
-                        '" data-lesson-id="' + escapeAdminText(concept.lesson_id || '') +
-                        '">Upload Video</button></td></tr>');
-                }
             };
 
             selectedChapters.forEach(chapter => {
@@ -212,25 +192,38 @@ async function loadAdminDashboardData() {
 
                 chapterLessons.forEach(lesson => {
                     const lessonConcepts = conceptsByLesson.get(lesson.id) || [];
-                    lessonConcepts.forEach(concept => addConceptToList(concept, chapterLabel, lesson.title));
-                });
-            });
+                    const readyConcepts = lessonConcepts.filter(isUploaded);
 
-            const classUnassigned = unassignedConcepts.filter(concept => {
-                const chapter = chapterMap.get(concept.chapter_id);
-                return chapter && Number(chapter.class_level) === Number(classLevel);
-            });
-            classUnassigned.forEach(concept => {
-                const chapter = chapterMap.get(concept.chapter_id);
-                const chapterLabel = 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + chapter.title;
-                addConceptToList(concept, chapterLabel, 'Not assigned');
+                    // Uploaded Videos remains concept-based and unchanged.
+                    readyConcepts.forEach(concept => uploadedRows.push(renderConceptRow(concept, chapterLabel, lesson.title)));
+
+                    // Pending Uploads is lesson-based: show every lesson that has no ready video.
+                    if (readyConcepts.length === 0) {
+                        const statuses = [...new Set(lessonConcepts.map(concept =>
+                            String(concept.mux_status || 'not_uploaded').toLowerCase()
+                        ))];
+                        let statusLabel = 'No video uploaded';
+                        if (statuses.includes('processing')) statusLabel = 'Video processing';
+                        else if (statuses.includes('uploading')) statusLabel = 'Video uploading';
+                        else if (statuses.includes('not_uploaded')) statusLabel = 'Not uploaded';
+
+                        const canStartUpload = !statuses.includes('uploading') && !statuses.includes('processing');
+                        pendingRows.push('<tr><td>' + escapeAdminText(chapterLabel) + '</td><td>' +
+                            escapeAdminText(lesson.title) + '</td><td>' + escapeAdminText(statusLabel) +
+                            '</td><td><button type="button" class="btn" data-upload-lesson="' +
+                            escapeAdminText(lesson.id) + '" data-class-level="' + escapeAdminText(classLevel) +
+                            '" data-chapter-id="' + escapeAdminText(chapter.id) + '"' +
+                            (canStartUpload ? '' : ' disabled') + '>' +
+                            (canStartUpload ? 'Upload Video' : 'In Progress') + '</button></td></tr>');
+                    }
+                });
             });
 
             const pendingBody = document.getElementById('pending-upload-list');
             if (pendingBody) {
                 pendingBody.innerHTML = pendingRows.length
                     ? pendingRows.join('')
-                    : '<tr><td colspan="5">No pending uploads for Class ' + escapeAdminText(classLevel) + '.</td></tr>';
+                    : '<tr><td colspan="4">All lessons in Class ' + escapeAdminText(classLevel) + ' have an uploaded video.</td></tr>';
             }
             if (lessonsBody) {
                 lessonsBody.innerHTML = uploadedRows.length
@@ -593,7 +586,6 @@ if (addLessonForm) {
 const uploadClassSelect = document.getElementById('upload-class-select');
 const uploadChapterSelect = document.getElementById('upload-chapter-select');
 const uploadLessonSelect = document.getElementById('upload-lesson-select');
-const uploadPendingConceptSelect = document.getElementById('upload-pending-concept-select');
 
 async function loadUploadChapters(classLevel) {
     if (!uploadChapterSelect) return;
@@ -675,30 +667,6 @@ async function loadUploadLessons(chapterId) {
     }
 }
 
-async function loadPendingConceptsForLesson(lessonId) {
-    if (!uploadPendingConceptSelect) return;
-    uploadPendingConceptSelect.disabled = true;
-    uploadPendingConceptSelect.innerHTML = '<option value="">Loading pending concepts...</option>';
-    if (!lessonId) {
-        uploadPendingConceptSelect.innerHTML = '<option value="">Select a lesson first</option>';
-        return;
-    }
-    const { data, error } = await supabaseClient
-        .from('concepts')
-        .select('id,title,mux_status,mux_upload_id,mux_asset_id,mux_playback_id')
-        .eq('lesson_id', lessonId)
-        .order('created_at', { ascending: true });
-    if (error) throw new Error('Could not load pending concepts for this lesson.');
-    const pending = (data || []).filter(concept => {
-        const status = String(concept.mux_status || '').toLowerCase();
-        return !(status === 'ready' && concept.mux_playback_id);
-    });
-    uploadPendingConceptSelect.innerHTML = '<option value="">Create a new concept instead</option>' +
-        pending.map(concept => '<option value="' + escapeAdminText(concept.id) + '">' +
-            escapeAdminText(concept.title) + ' (' + escapeAdminText(concept.mux_status || 'Not uploaded') + ')</option>').join('');
-    uploadPendingConceptSelect.disabled = false;
-}
-
 if (uploadClassSelect) {
     uploadClassSelect.addEventListener('change', async () => {
         uploadLessonSelect.innerHTML = '<option value="">Select a chapter first</option>';
@@ -713,28 +681,12 @@ if (uploadChapterSelect) {
         document.getElementById('upload-video-error').textContent = '';
         try {
             await loadUploadLessons(uploadChapterSelect.value);
-            await loadPendingConceptsForLesson('');
         } catch (error) { document.getElementById('upload-video-error').textContent = error.message; }
     });
 }
 if (uploadLessonSelect) {
-    uploadLessonSelect.addEventListener('change', async () => {
+    uploadLessonSelect.addEventListener('change', () => {
         document.getElementById('upload-video-error').textContent = '';
-        try { await loadPendingConceptsForLesson(uploadLessonSelect.value); }
-        catch (error) { document.getElementById('upload-video-error').textContent = error.message; }
-    });
-}
-if (uploadPendingConceptSelect) {
-    uploadPendingConceptSelect.addEventListener('change', () => {
-        const titleInput = document.getElementById('upload-concept-title');
-        const selected = uploadPendingConceptSelect.selectedOptions[0];
-        if (uploadPendingConceptSelect.value) {
-            titleInput.value = selected.textContent.replace(/\\s+\\([^)]*\\)$/, '');
-            titleInput.readOnly = true;
-        } else {
-            titleInput.value = '';
-            titleInput.readOnly = false;
-        }
     });
 }
 
@@ -753,9 +705,8 @@ if (uploadVideoForm) uploadVideoForm.addEventListener('submit', async (event) =>
     const percent = document.getElementById('upload-percent');
     const status = document.getElementById('upload-status');
     errorBox.textContent = '';
-    const existingPendingConceptId = uploadPendingConceptSelect ? uploadPendingConceptSelect.value : '';
-    if (![11, 12].includes(classLevel) || !chapterId || !lessonId || (!existingPendingConceptId && !conceptTitle) || !file) {
-        errorBox.textContent = 'Please select class, chapter, lesson, choose an existing pending concept or enter a new concept name, and choose a video.';
+    if (![11, 12].includes(classLevel) || !chapterId || !lessonId || !conceptTitle || !file) {
+        errorBox.textContent = 'Please select class, chapter, lesson, enter a concept name, and choose a video.';
         return;
     }
     if (!file.type.startsWith('video/')) {
@@ -784,36 +735,19 @@ if (uploadVideoForm) uploadVideoForm.addEventListener('submit', async (event) =>
             .single();
         if (lessonError || !lessonRecord) throw new Error('The selected lesson does not belong to this chapter. Please select it again.');
 
-        if (existingPendingConceptId) {
-            status.textContent = 'Verifying pending concept...';
-            const { data: existingConcept, error: existingConceptError } = await supabaseClient
-                .from('concepts')
-                .select('id,mux_status,mux_upload_id')
-                .eq('id', existingPendingConceptId)
-                .eq('chapter_id', chapterId)
-                .eq('lesson_id', lessonRecord.id)
-                .single();
-            if (existingConceptError || !existingConcept) throw new Error('The selected pending concept does not belong to this lesson.');
-            const existingStatus = String(existingConcept.mux_status || '').toLowerCase();
-            if (existingConcept.mux_upload_id || ['uploading', 'processing', 'ready'].includes(existingStatus)) {
-                throw new Error('This concept already has a video upload. Refresh the dashboard.');
-            }
-            conceptId = existingConcept.id;
-        } else {
-            status.textContent = 'Creating concept record...';
-            const { data: concept, error: conceptError } = await supabaseClient.from('concepts')
-                .insert([{
-                    chapter_id: chapterId,
-                    lesson_id: lessonRecord.id,
-                    category: lessonRecord.title,
-                    title: conceptTitle,
-                    mux_status: 'not_uploaded',
-                    is_published: false
-                }])
-                .select('id').single();
-            if (conceptError) throw new Error('Could not save concept: ' + conceptError.message);
-            conceptId = concept.id;
-        }
+        status.textContent = 'Creating concept record...';
+        const { data: concept, error: conceptError } = await supabaseClient.from('concepts')
+            .insert([{
+                chapter_id: chapterId,
+                lesson_id: lessonRecord.id,
+                category: lessonRecord.title,
+                title: conceptTitle,
+                mux_status: 'not_uploaded',
+                is_published: false
+            }])
+            .select('id').single();
+        if (conceptError) throw new Error('Could not save concept: ' + conceptError.message);
+        conceptId = concept.id;
 
         status.textContent = 'Creating secure upload link...';
         const { data: uploadData, error: functionError } = await supabaseClient.functions.invoke('create-mux-upload', { body: {} });
@@ -853,8 +787,6 @@ if (uploadVideoForm) uploadVideoForm.addEventListener('submit', async (event) =>
         toast('Video uploaded! Mux is processing it.');
         document.getElementById('lesson-video-file').value = '';
         document.getElementById('upload-concept-title').value = '';
-        if (uploadPendingConceptSelect) uploadPendingConceptSelect.value = '';
-        if (uploadPendingConceptSelect) await loadPendingConceptsForLesson(lessonId);
         loadAdminDashboardData();
     } catch (error) {
         console.error('Mux concept video upload failed:', error);
