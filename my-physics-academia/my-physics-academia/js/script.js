@@ -1141,7 +1141,15 @@ if (assetConceptForm) assetConceptForm.addEventListener('submit', async event =>
 });
 loadMuxAssetOptions();
 
+// Refresh asset choices when the existing Upload Interface is opened.
+document.querySelectorAll('.tabs button[data-pane="up"]').forEach(button => {
+    button.addEventListener('click', loadMuxAssetOptions);
+});
+
 // Load the library when its dashboard tab is opened.
 document.querySelectorAll('.tabs button[data-pane="ma"]').forEach(button => {
-    button.addEventListener('click', loadMuxAssetLibrary);
+    button.addEventListener('click', async () => {
+        await loadMuxAssetLibrary();
+        await loadMuxAssetOptions();
+    });
 });
