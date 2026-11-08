@@ -68,74 +68,54 @@ async function loadAdminDashboardData() {
         const { data: authData, error: authError } = await supabaseClient.auth.getUser();
         if (authError || !authData.user) throw new Error('Please sign in again.');
 
-        // Confirm this signed-in account is present in the admin allowlist.
         const { data: adminRecord, error: adminError } = await supabaseClient
-            .from('admin_users')
-            .select('user_id')
-            .eq('user_id', authData.user.id)
-            .maybeSingle();
-
+            .from('admin_users').select('user_id').eq('user_id', authData.user.id).maybeSingle();
         if (adminError) throw new Error('Could not verify admin permission. Check Supabase policies.');
         if (!adminRecord) throw new Error('This account is not registered as an admin.');
 
         const [
             { data: courses, error: coursesError, count: courseCount },
-            { data: lessons, error: lessonsError, count: lessonCount }
+            { data: concepts, error: conceptsError, count: conceptCount },
+            { data: chapters, error: chaptersError }
         ] = await Promise.all([
             supabaseClient.from('courses').select('id,title,class_level,is_published', { count: 'exact' }).order('created_at', { ascending: false }),
-            supabaseClient.from('lessons').select('id,title,course_id,is_published,sort_order,mux_status', { count: 'exact' }).order('sort_order', { ascending: true })
+            supabaseClient.from('concepts').select('id,title,chapter_id,category,is_published,mux_status,sort_order', { count: 'exact' }).order('created_at', { ascending: false }),
+            supabaseClient.from('chapters').select('id,title,class_level,sort_order').order('class_level', { ascending: true }).order('sort_order', { ascending: true }).range(0, 999)
         ]);
 
         if (coursesError) throw coursesError;
-        if (lessonsError) throw lessonsError;
+        if (conceptsError) throw conceptsError;
+        if (chaptersError) throw chaptersError;
 
         if (coursesCount) coursesCount.textContent = courseCount ?? courses.length;
-        if (lessonsCount) lessonsCount.textContent = lessonCount ?? lessons.length;
+        if (lessonsCount) lessonsCount.textContent = conceptCount ?? concepts.length;
 
-        const courseNames = new Map((courses || []).map(course => [course.id, course.title]));
-        const uploadLessonSelect = document.getElementById('upload-lesson-select');
-        if (uploadLessonSelect) {
-            const previousLessonId = uploadLessonSelect.value;
-            uploadLessonSelect.innerHTML = lessons && lessons.length
-                ? '<option value="">Select a lesson</option>' + lessons.map(lesson => {
-                    const courseName = courseNames.get(lesson.course_id) || 'Course';
-                    const videoState = lesson.mux_status ? ' — ' + lesson.mux_status : '';
-                    return `<option value="${escapeAdminText(lesson.id)}">${escapeAdminText(courseName)} / ${escapeAdminText(lesson.title)}${escapeAdminText(videoState)}</option>`;
-                  }).join('')
-                : '<option value="">Create a lesson first</option>';
-            if (previousLessonId && (lessons || []).some(lesson => lesson.id === previousLessonId)) {
-                uploadLessonSelect.value = previousLessonId;
-            }
-        }
-
-        const lessonCourseSelect = document.getElementById('new-lesson-course');
-        if (lessonCourseSelect) {
-            const previousCourseId = lessonCourseSelect.value;
-            lessonCourseSelect.innerHTML = courses && courses.length
-                ? '<option value="">Select a course</option>' + courses.map(course => `<option value="${escapeAdminText(course.id)}">${escapeAdminText(course.title)} (Class ${course.class_level})</option>`).join('')
-                : '<option value="">Create a course first</option>';
-            if (previousCourseId && (courses || []).some(course => course.id === previousCourseId)) {
-                lessonCourseSelect.value = previousCourseId;
-            }
-        }
         if (coursesBody) {
             coursesBody.innerHTML = courses && courses.length
-                ? courses.map(course => `<tr><td>${escapeAdminText(course.title)}</td><td>Class ${course.class_level}</td><td>${course.is_published ? 'Published' : 'Draft'}</td></tr>`).join('')
-                : '<tr><td colspan="3">No courses yet. Add your first course next.</td></tr>';
+                ? courses.map(course => '<tr><td>' + escapeAdminText(course.title) + '</td><td>Class ' + escapeAdminText(course.class_level) + '</td><td>' + (course.is_published ? 'Published' : 'Draft') + '</td></tr>').join('')
+                : '<tr><td colspan="3">No courses found.</td></tr>';
         }
 
+        const chapterMap = new Map((chapters || []).map(ch => [ch.id, ch]));
         if (lessonsBody) {
-            lessonsBody.innerHTML = lessons && lessons.length
-                ? lessons.map(lesson => `<tr><td>${escapeAdminText(lesson.title)}</td><td>${escapeAdminText(courseNames.get(lesson.course_id) || 'Course unavailable')}</td><td>${lesson.is_published ? 'Published' : 'Draft'}</td></tr>`).join('')
-                : '<tr><td colspan="3">No lessons yet. Lessons will appear here after you add them.</td></tr>';
+            lessonsBody.innerHTML = concepts && concepts.length
+                ? concepts.map(concept => {
+                    const chapter = chapterMap.get(concept.chapter_id);
+                    const chapterLabel = chapter
+                        ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + chapter.title
+                        : 'Chapter unavailable';
+                    return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td></tr>';
+                  }).join('')
+                : '<tr><td colspan="4">No concepts uploaded yet. Add a concept using Upload Interface.</td></tr>';
         }
     } catch (error) {
         console.error('Admin dashboard data load failed:', error);
         if (coursesBody) coursesBody.innerHTML = '<tr><td colspan="3">Could not load courses. Please refresh.</td></tr>';
-        if (lessonsBody) lessonsBody.innerHTML = '<tr><td colspan="3">Could not load lessons. Please refresh.</td></tr>';
+        if (lessonsBody) lessonsBody.innerHTML = '<tr><td colspan="4">Could not load concepts. Please refresh.</td></tr>';
         toast(error.message || 'Could not load admin data.');
     }
 }
+
 
 function escapeAdminText(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -373,16 +353,25 @@ async function loadUploadChapters(classLevel) {
         uploadChapterSelect.innerHTML = '<option value="">Select a class first</option>';
         return;
     }
-    const { data, error } = await supabaseClient.from('chapters').select('id,title,sort_order').eq('class_level', Number(classLevel)).order('sort_order', { ascending: true });
+    const { data, error, count } = await supabaseClient
+        .from('chapters')
+        .select('id,title,class_level,sort_order', { count: 'exact' })
+        .order('sort_order', { ascending: true })
+        .range(0, 999);
     if (error) {
         console.error('Chapter list failed:', error);
         uploadChapterSelect.innerHTML = '<option value="">Could not load chapters</option>';
         throw new Error('Could not load chapters. Please refresh and try again.');
     }
-    uploadChapterSelect.innerHTML = data && data.length
-        ? '<option value="">Select a chapter</option>' + data.map(ch => '<option value="' + escapeAdminText(ch.id) + '">Chapter ' + escapeAdminText(ch.sort_order) + ': ' + escapeAdminText(ch.title) + '</option>').join('')
+    const matching = (data || []).filter(ch => Number(ch.class_level) === Number(classLevel));
+    uploadChapterSelect.innerHTML = matching.length
+        ? '<option value="">Select a chapter (' + matching.length + ' available)</option>' + matching.map(ch =>
+            '<option value="' + escapeAdminText(ch.id) + '">Chapter ' + escapeAdminText(ch.sort_order) + ': ' + escapeAdminText(ch.title) + '</option>').join('')
         : '<option value="">No chapters found for this class</option>';
-    uploadChapterSelect.disabled = !data || data.length === 0;
+    uploadChapterSelect.disabled = matching.length === 0;
+    if (matching.length !== 14) {
+        console.warn('Expected 14 chapters for Class ' + classLevel + ', found ' + matching.length + '. Total rows visible: ' + (count ?? (data || []).length));
+    }
 }
 
 if (uploadClassSelect) {
