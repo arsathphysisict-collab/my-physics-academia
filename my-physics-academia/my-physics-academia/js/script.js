@@ -183,7 +183,9 @@ async function loadAdminDashboardData() {
 
             const isUploaded = concept => {
                 const status = String(concept.mux_status || '').toLowerCase();
-                return Boolean(concept.mux_upload_id) || ['uploading', 'processing', 'ready'].includes(status);
+                // Classify by the actual upload state, not merely by the presence of an old upload ID.
+                // A stale upload ID must not hide a concept that still needs a usable video.
+                return ['uploading', 'processing', 'ready'].includes(status);
             };
 
             const addConceptToList = (concept, chapterLabel, lessonTitle) => {
@@ -689,7 +691,7 @@ async function loadPendingConceptsForLesson(lessonId) {
     if (error) throw new Error('Could not load pending concepts for this lesson.');
     const pending = (data || []).filter(concept => {
         const status = String(concept.mux_status || '').toLowerCase();
-        return !concept.mux_upload_id && !['uploading', 'processing', 'ready'].includes(status);
+        return !['uploading', 'processing', 'ready'].includes(status);
     });
     uploadPendingConceptSelect.innerHTML = '<option value="">Create a new concept instead</option>' +
         pending.map(concept => '<option value="' + escapeAdminText(concept.id) + '">' +
