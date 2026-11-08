@@ -77,7 +77,7 @@ async function loadAdminDashboardData() {
             { data: concepts, error: conceptsError, count: conceptCount },
             { data: chapters, error: chaptersError }
         ] = await Promise.all([
-            supabaseClient.from('concepts').select('id,title,chapter_id,category,is_published,mux_status,sort_order,is_preview,thumbnail_url', { count: 'exact' }).order('created_at', { ascending: false }),
+            supabaseClient.from('concepts').select('id,title,chapter_id,category,is_published,mux_status,sort_order,is_preview,preview_order,thumbnail_url', { count: 'exact' }).order('created_at', { ascending: false }),
             supabaseClient.from('chapters').select('id,title,class_level,sort_order').order('class_level', { ascending: true }).order('sort_order', { ascending: true }).range(0, 999)
         ]);
 
@@ -102,7 +102,10 @@ async function loadAdminDashboardData() {
                     const chapterLabel = chapter
                         ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + ((COURSES[Number(chapter.class_level)] && COURSES[Number(chapter.class_level)].ch[Number(chapter.sort_order) - 1]) || chapter.title)
                         : 'Chapter unavailable';
-                    return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td><td>' + (concept.is_published ? 'Published' : 'Draft') + '</td><td>' + (concept.is_preview ? (concept.thumbnail_url ? '<img src="' + escapeAdminText(concept.thumbnail_url) + '" alt="Current preview thumbnail" style="width:76px;height:44px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px">' : '<span style="display:block;font-size:12px;margin-bottom:6px">No thumbnail set</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-thumbnail-upload="' + escapeAdminText(concept.id) + '" aria-label="Upload preview thumbnail" style="max-width:180px;font-size:12px">' : '<span style="color:#667085;font-size:12px">Not a preview</span>') + '</td><td><button type="button" class="btn ' + (concept.is_published ? 'o' : '') + '" data-publish-concept="' + escapeAdminText(concept.id) + '" data-published="' + (concept.is_published ? 'true' : 'false') + '" ' + (concept.mux_status === 'ready' ? '' : 'disabled title="Video must be ready before publishing"') + '>' + (concept.is_published ? 'Unpublish' : 'Publish') + '</button></td></tr>';
+                    const previewValue = concept.is_preview ? String(concept.preview_order || '') : '';
+                    const previewOptions = [['', 'Not a Preview'], ['1', 'Preview Slot 1'], ['2', 'Preview Slot 2'], ['3', 'Preview Slot 3']]
+                        .map(([value, label]) => '<option value="' + value + '" ' + (previewValue === value ? 'selected' : '') + '>' + label + '</option>').join('');
+                    return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td><td>' + (concept.is_published ? 'Published' : 'Draft') + '</td><td><select data-preview-setting="' + escapeAdminText(concept.id) + '" aria-label="Preview status and slot" style="max-width:150px;font-size:12px;margin-bottom:6px">' + previewOptions + '</select>' + (concept.is_preview ? (concept.thumbnail_url ? '<img src="' + escapeAdminText(concept.thumbnail_url) + '" alt="Current preview thumbnail" style="width:76px;height:44px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px">' : '<span style="display:block;font-size:12px;margin-bottom:6px">No thumbnail set</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-thumbnail-upload="' + escapeAdminText(concept.id) + '" aria-label="Upload preview thumbnail" style="max-width:180px;font-size:12px">' : '<span style="display:block;color:#667085;font-size:12px">Choose a Preview Slot to enable thumbnail upload</span>') + '</td><td><button type="button" class="btn ' + (concept.is_published ? 'o' : '') + '" data-publish-concept="' + escapeAdminText(concept.id) + '" data-published="' + (concept.is_published ? 'true' : 'false') + '" ' + (concept.mux_status === 'ready' ? '' : 'disabled title="Video must be ready before publishing"') + '>' + (concept.is_published ? 'Unpublish' : 'Publish') + '</button></td></tr>';
                   }).join('')
                 : '<tr><td colspan="6">No concepts uploaded yet. Add a concept using Upload Interface.</td></tr>';
         }
@@ -116,6 +119,40 @@ async function loadAdminDashboardData() {
 
 
         const manageLessonsBody = document.getElementById('admin-lessons-list');
+        if (manageLessonsBody && !manageLessonsBody.dataset.previewSettingHandlerAttached) {
+            manageLessonsBody.dataset.previewSettingHandlerAttached = 'true';
+            manageLessonsBody.addEventListener('change', async (event) => {
+                const select = event.target.closest('[data-preview-setting]');
+                if (!select) return;
+                const conceptId = select.dataset.previewSetting;
+                const selectedSlot = select.value;
+                select.disabled = true;
+                try {
+                    const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+                    if (authError || !authData.user) throw new Error('Your login session has expired. Please log in again.');
+                    const { data: adminRecord, error: adminError } = await supabaseClient
+                        .from('admin_users').select('user_id').eq('user_id', authData.user.id).maybeSingle();
+                    if (adminError || !adminRecord) throw new Error('Admin permission could not be verified.');
+                    const update = selectedSlot
+                        ? { is_preview: true, preview_order: Number(selectedSlot) }
+                        : { is_preview: false, preview_order: null };
+                    const { error: updateError } = await supabaseClient
+                        .from('concepts').update(update).eq('id', conceptId);
+                    if (updateError) {
+                        if (updateError.code === '23505') throw new Error('That Preview Slot is already in use. Choose another free slot.');
+                        throw updateError;
+                    }
+                    toast(selectedSlot ? 'Preview slot assigned.' : 'Preview status removed.');
+                    await loadAdminDashboardData();
+                } catch (error) {
+                    console.error('Preview setting update failed:', error);
+                    toast(error.message || 'Could not update preview setting.');
+                    select.disabled = false;
+                    await loadAdminDashboardData();
+                }
+            });
+        }
+
         if (manageLessonsBody && !manageLessonsBody.dataset.thumbnailHandlerAttached) {
             manageLessonsBody.dataset.thumbnailHandlerAttached = 'true';
             manageLessonsBody.addEventListener('change', async (event) => {
