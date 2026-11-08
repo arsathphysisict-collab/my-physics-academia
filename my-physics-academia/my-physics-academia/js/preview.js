@@ -65,6 +65,15 @@
     thumbnail.className = "preview-thumb";
     thumbnail.setAttribute("aria-hidden", "true");
 
+    if (video.thumbnail_url) {
+      const image = document.createElement("img");
+      image.src = video.thumbnail_url;
+      image.alt = "";
+      image.loading = "lazy";
+      image.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover";
+      thumbnail.appendChild(image);
+    }
+
     const thumbnailLabel = document.createElement("span");
     thumbnailLabel.className = "preview-thumb-label";
     thumbnailLabel.textContent = "FREE PREVIEW";
