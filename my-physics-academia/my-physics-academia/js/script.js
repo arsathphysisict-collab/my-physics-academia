@@ -135,7 +135,7 @@ async function loadAdminDashboardData() {
             { data: chapters, error: chaptersError },
             { data: lessons, error: lessonsError }
         ] = await Promise.all([
-            supabaseClient.from('concepts').select('id,title,chapter_id,lesson_id,category,is_published,mux_status,mux_upload_id,sort_order,is_preview,preview_order,thumbnail_url', { count: 'exact' }).order('created_at', { ascending: true }),
+            supabaseClient.from('concepts').select('id,title,chapter_id,lesson_id,category,is_published,mux_status,mux_upload_id,mux_asset_id,sort_order,is_preview,preview_order,thumbnail_url', { count: 'exact' }).order('created_at', { ascending: true }),
             supabaseClient.from('chapters').select('id,title,class_level,sort_order').order('class_level', { ascending: true }).order('sort_order', { ascending: true }).range(0, 999),
             supabaseClient.from('lessons').select('id,title,chapter_id,sort_order').not('chapter_id', 'is', null).order('sort_order', { ascending: true }).range(0, 999)
         ]);
@@ -183,9 +183,9 @@ async function loadAdminDashboardData() {
 
             const isUploaded = concept => {
                 const status = String(concept.mux_status || '').toLowerCase();
-                // Classify by the actual upload state, not merely by the presence of an old upload ID.
-                // A stale upload ID must not hide a concept that still needs a usable video.
-                return ['uploading', 'processing', 'ready'].includes(status);
+                // Only a real Mux asset (or a confirmed ready state) counts as an uploaded video.
+                // Upload IDs and in-progress states alone must remain in Pending Uploads.
+                return Boolean(concept.mux_asset_id) || status === 'ready';
             };
 
             const addConceptToList = (concept, chapterLabel, lessonTitle) => {
@@ -685,13 +685,13 @@ async function loadPendingConceptsForLesson(lessonId) {
     }
     const { data, error } = await supabaseClient
         .from('concepts')
-        .select('id,title,mux_status,mux_upload_id')
+        .select('id,title,mux_status,mux_upload_id,mux_asset_id')
         .eq('lesson_id', lessonId)
         .order('created_at', { ascending: true });
     if (error) throw new Error('Could not load pending concepts for this lesson.');
     const pending = (data || []).filter(concept => {
         const status = String(concept.mux_status || '').toLowerCase();
-        return !['uploading', 'processing', 'ready'].includes(status);
+        return !concept.mux_asset_id && status !== 'ready';
     });
     uploadPendingConceptSelect.innerHTML = '<option value="">Create a new concept instead</option>' +
         pending.map(concept => '<option value="' + escapeAdminText(concept.id) + '">' +
