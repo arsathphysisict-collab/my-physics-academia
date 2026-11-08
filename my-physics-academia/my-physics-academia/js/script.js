@@ -102,17 +102,47 @@ async function loadAdminDashboardData() {
                     const chapterLabel = chapter
                         ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + ((COURSES[Number(chapter.class_level)] && COURSES[Number(chapter.class_level)].ch[Number(chapter.sort_order) - 1]) || chapter.title)
                         : 'Chapter unavailable';
-                    return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td></tr>';
+                    return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td><td>' + (concept.is_published ? 'Published' : 'Draft') + '</td><td><button type="button" class="btn ' + (concept.is_published ? 'o' : '') + '" data-publish-concept="' + escapeAdminText(concept.id) + '" data-published="' + (concept.is_published ? 'true' : 'false') + '" ' + (concept.mux_status === 'ready' ? '' : 'disabled title="Video must be ready before publishing"') + '>' + (concept.is_published ? 'Unpublish' : 'Publish') + '</button></td></tr>';
                   }).join('')
-                : '<tr><td colspan="4">No concepts uploaded yet. Add a concept using Upload Interface.</td></tr>';
+                : '<tr><td colspan="6">No concepts uploaded yet. Add a concept using Upload Interface.</td></tr>';
         }
     } catch (error) {
         console.error('Admin dashboard data load failed:', error);
         if (coursesBody) coursesBody.innerHTML = '<tr><td colspan="3">Could not load courses. Please refresh.</td></tr>';
-        if (lessonsBody) lessonsBody.innerHTML = '<tr><td colspan="4">Could not load concepts. Please refresh.</td></tr>';
+        if (lessonsBody) lessonsBody.innerHTML = '<tr><td colspan="6">Could not load concepts. Please refresh.</td></tr>';
         toast(error.message || 'Could not load admin data.');
     }
 }
+
+
+        if (lessonsBody && !lessonsBody.dataset.publishHandlerAttached) {
+            lessonsBody.dataset.publishHandlerAttached = 'true';
+            lessonsBody.addEventListener('click', async (event) => {
+                const publishButton = event.target.closest('[data-publish-concept]');
+                if (!publishButton || publishButton.disabled) return;
+                const conceptId = publishButton.dataset.publishConcept;
+                const currentlyPublished = publishButton.dataset.published === 'true';
+                const nextPublished = !currentlyPublished;
+                publishButton.disabled = true;
+                publishButton.textContent = nextPublished ? 'Publishing...' : 'Unpublishing...';
+                try {
+                    const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+                    if (authError || !authData.user) throw new Error('Your login session has expired. Please log in again.');
+                    const { data: adminRecord, error: adminError } = await supabaseClient
+                        .from('admin_users').select('user_id').eq('user_id', authData.user.id).maybeSingle();
+                    if (adminError || !adminRecord) throw new Error('Admin permission could not be verified.');
+                    const { error: updateError } = await supabaseClient
+                        .from('concepts').update({ is_published: nextPublished }).eq('id', conceptId);
+                    if (updateError) throw updateError;
+                    toast(nextPublished ? 'Concept published.' : 'Concept moved back to draft.');
+                    await loadAdminDashboardData();
+                } catch (error) {
+                    console.error('Concept publish status update failed:', error);
+                    toast(error.message || 'Could not update publish status.');
+                    await loadAdminDashboardData();
+                }
+            });
+        }
 
 
 function escapeAdminText(value) {
