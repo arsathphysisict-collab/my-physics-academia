@@ -463,7 +463,7 @@ if (addLessonForm) {
 // Concept-based Mux upload flow: Class -> Chapter -> Category -> Concept -> Video.
 const uploadClassSelect = document.getElementById('upload-class-select');
 const uploadChapterSelect = document.getElementById('upload-chapter-select');
-const uploadCategorySelect = document.getElementById('upload-category-select');
+const uploadLessonSelect = document.getElementById('upload-lesson-select');
 
 async function loadUploadChapters(classLevel) {
     if (!uploadChapterSelect) return;
@@ -511,9 +511,53 @@ async function loadUploadChapters(classLevel) {
     }
 }
 
+async function loadUploadLessons(chapterId) {
+    if (!uploadLessonSelect) return;
+    uploadLessonSelect.disabled = true;
+    uploadLessonSelect.innerHTML = '<option value="">Loading lessons...</option>';
+
+    if (!chapterId) {
+        uploadLessonSelect.innerHTML = '<option value="">Select a chapter first</option>';
+        return;
+    }
+
+    const { data, error } = await supabaseClient
+        .from('lessons')
+        .select('id,title,sort_order')
+        .eq('chapter_id', chapterId)
+        .order('sort_order', { ascending: true });
+
+    if (error) {
+        console.error('Lesson lookup failed:', error);
+        uploadLessonSelect.innerHTML = '<option value="">Could not load lessons</option>';
+        throw new Error('Could not load lessons for this chapter. Please refresh and try again.');
+    }
+
+    uploadLessonSelect.innerHTML = '<option value="">Select a lesson</option>' +
+        (data || []).map(lesson =>
+            '<option value="' + escapeAdminText(lesson.id) + '">' +
+            escapeAdminText(lesson.title) + '</option>'
+        ).join('');
+
+    uploadLessonSelect.disabled = !data || data.length === 0;
+    if (!data || data.length === 0) {
+        uploadLessonSelect.innerHTML = '<option value="">No lessons found for this chapter</option>';
+    }
+}
+
 if (uploadClassSelect) {
     uploadClassSelect.addEventListener('change', async () => {
+        uploadLessonSelect.innerHTML = '<option value="">Select a chapter first</option>';
+        uploadLessonSelect.disabled = true;
         try { await loadUploadChapters(uploadClassSelect.value); }
+        catch (error) { document.getElementById('upload-video-error').textContent = error.message; }
+    });
+}
+
+if (uploadChapterSelect) {
+    uploadChapterSelect.addEventListener('change', async () => {
+        document.getElementById('upload-video-error').textContent = '';
+        try { await loadUploadLessons(uploadChapterSelect.value); }
         catch (error) { document.getElementById('upload-video-error').textContent = error.message; }
     });
 }
@@ -524,7 +568,7 @@ if (uploadVideoForm) uploadVideoForm.addEventListener('submit', async (event) =>
     const errorBox = document.getElementById('upload-video-error');
     const classLevel = Number(uploadClassSelect.value);
     const chapterId = uploadChapterSelect.value;
-    const category = uploadCategorySelect.value;
+    const lessonId = uploadLessonSelect.value;
     const conceptTitle = document.getElementById('upload-concept-title').value.trim();
     const file = document.getElementById('lesson-video-file').files[0];
     const button = document.getElementById('start-video-upload');
@@ -533,8 +577,8 @@ if (uploadVideoForm) uploadVideoForm.addEventListener('submit', async (event) =>
     const percent = document.getElementById('upload-percent');
     const status = document.getElementById('upload-status');
     errorBox.textContent = '';
-    if (![11, 12].includes(classLevel) || !chapterId || !category || !conceptTitle || !file) {
-        errorBox.textContent = 'Please select class, chapter, category, enter concept name and choose a video.';
+    if (![11, 12].includes(classLevel) || !chapterId || !lessonId || !conceptTitle || !file) {
+        errorBox.textContent = 'Please select class, chapter, lesson, enter concept name and choose a video.';
         return;
     }
     if (!file.type.startsWith('video/')) {
@@ -554,9 +598,25 @@ if (uploadVideoForm) uploadVideoForm.addEventListener('submit', async (event) =>
         const { data: adminRecord, error: adminError } = await supabaseClient.from('admin_users').select('user_id').eq('user_id', authData.user.id).maybeSingle();
         if (adminError || !adminRecord) throw new Error('Admin permission could not be verified.');
 
+        status.textContent = 'Checking selected lesson...';
+        const { data: lessonRecord, error: lessonError } = await supabaseClient
+            .from('lessons')
+            .select('id,title,chapter_id')
+            .eq('id', lessonId)
+            .eq('chapter_id', chapterId)
+            .single();
+        if (lessonError || !lessonRecord) throw new Error('The selected lesson does not belong to this chapter. Please select it again.');
+
         status.textContent = 'Creating concept record...';
         const { data: concept, error: conceptError } = await supabaseClient.from('concepts')
-            .insert([{ chapter_id: chapterId, category, title: conceptTitle, mux_status: 'not_uploaded', is_published: false }])
+            .insert([{
+                chapter_id: chapterId,
+                lesson_id: lessonRecord.id,
+                category: lessonRecord.title,
+                title: conceptTitle,
+                mux_status: 'not_uploaded',
+                is_published: false
+            }])
             .select('id').single();
         if (conceptError) throw new Error('Could not save concept: ' + conceptError.message);
         conceptId = concept.id;
