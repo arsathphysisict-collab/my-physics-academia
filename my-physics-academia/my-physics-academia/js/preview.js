@@ -91,8 +91,13 @@
 
     const detail = document.createElement("small");
     const chapter = video.chapter || {};
+    const clipStart = video.start_time_seconds == null ? 0 : Number(video.start_time_seconds);
+    const clipEnd = video.end_time_seconds == null ? Number(video.duration_seconds) : Number(video.end_time_seconds);
+    const clipDuration = Number.isFinite(clipStart) && Number.isFinite(clipEnd) && clipEnd > clipStart
+      ? clipEnd - clipStart
+      : video.duration_seconds;
     detail.textContent = "Class " + (chapter.class_level || "") + " · " +
-      (chapter.title || "Chapter") + " · " + formatDuration(video.duration_seconds);
+      (chapter.title || "Chapter") + " · " + formatDuration(clipDuration);
 
     const state = document.createElement("span");
     state.className = "preview-state";
@@ -181,6 +186,17 @@
         throw new Error((data && data.error) || "Secure playback details were not returned.");
       }
 
+      const clipStart = Number(data.startTime);
+      const clipEnd = Number(data.endTime);
+      if (
+        !Number.isFinite(clipStart) ||
+        !Number.isFinite(clipEnd) ||
+        clipStart < 0 ||
+        clipEnd <= clipStart
+      ) {
+        throw new Error("The preview clip range is invalid.");
+      }
+
       saveWatchedId(video.id);
       button.querySelector(".preview-state").textContent = "Preview started";
       titleElement.textContent = video.title;
@@ -211,10 +227,39 @@
       player.tokens = { playback: data.token };
       player.playbackId = data.playbackId;
 
+      let clipFinished = false;
+
+      const enforceClipStart = () => {
+        if (player.currentTime < clipStart) {
+          player.currentTime = clipStart;
+        }
+      };
+
+      player.addEventListener("loadedmetadata", enforceClipStart);
+      player.addEventListener("canplay", enforceClipStart);
+
+      player.addEventListener("seeking", () => {
+        if (player.currentTime < clipStart) {
+          player.currentTime = clipStart;
+        } else if (player.currentTime > clipEnd) {
+          player.currentTime = clipEnd;
+        }
+      });
+
+      player.addEventListener("timeupdate", () => {
+        if (!clipFinished && player.currentTime >= clipEnd) {
+          clipFinished = true;
+          player.pause();
+          player.currentTime = clipEnd;
+          showStatus("Preview finished. This preview has now been used.");
+        }
+      });
+
       player.addEventListener("error", () => {
         showStatus("The video could not be played. Please contact the website administrator.", true);
       });
       player.addEventListener("ended", () => {
+        clipFinished = true;
         showStatus("Preview finished. This preview has now been used.");
       });
       playerContainer.replaceChildren(player);
