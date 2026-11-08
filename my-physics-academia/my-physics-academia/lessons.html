@@ -1,20 +1,54 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Video Lessons | My Physics Academia</title><meta name="description" content="Preview the My Physics Academia video learning interface with lesson list and navigation.">
-<meta property="og:title" content="Video Lessons | My Physics Academia"><meta property="og:description" content="Preview the My Physics Academia video learning interface with lesson list and navigation."><meta property="og:type" content="website"><meta property="og:image" content="images/logo.svg">
-<link rel="icon" href="images/logo.svg"><link rel="stylesheet" href="css/style.css">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview Lessons | My Physics Academia</title>
+<meta name="description" content="Watch free preview lessons from My Physics Academia.">
+<meta property="og:title" content="Preview Lessons | My Physics Academia">
+<meta property="og:description" content="Watch free preview lessons from My Physics Academia.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="images/logo.svg">
+<link rel="icon" href="images/logo.svg">
+<link rel="stylesheet" href="css/style.css">
+<style>
+.preview-intro{margin-bottom:22px}.preview-status{margin:14px 0;color:var(--muted,#667085);font-size:.95rem}.preview-status.error{color:#b42318}
+.preview-placeholder{min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#101828;color:#fff;border-radius:14px}
+.preview-placeholder span{font-size:42px}.preview-placeholder small{color:#d0d5dd}
+.preview-list{display:grid;gap:12px}.preview-item{width:100%;text-align:left;padding:15px;border:1px solid #e4e7ec;border-radius:12px;background:#fff;cursor:pointer;color:inherit;display:grid;gap:7px}
+.preview-item:hover,.preview-item.active{border-color:var(--primary,#2563eb);box-shadow:0 2px 10px #10182812}.preview-item:disabled{cursor:not-allowed;opacity:.65}
+.preview-item small{color:#667085;line-height:1.5}.preview-state{font-size:.82rem;font-weight:600;color:var(--primary,#2563eb)}
+.preview-note{font-size:.85rem;color:#667085;margin-top:14px}
+@media(max-width:760px){.preview-placeholder{min-height:210px}}
+</style>
 <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-PJ5R6S8J"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-</script>
-<!-- GOOGLE ANALYTICS 4 (placeholder, NOT active): add GA4 inside GTM (recommended) or paste the gtag.js snippet here with your real G-XXXXXXXXXX ID. -->
-</head><body>
-<!-- GTM noscript placeholder: paste the real GTM <noscript> iframe snippet right after <body> when ready. -->
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());</script>
+</head>
+<body>
 <header><div class="wrap nav"><a class="brand" href="index.html"><img src="images/logo.svg" alt="My Physics Academia logo">MY PHYSICS ACADEMIA</a>
 <button id="burger" aria-label="Open menu">☰</button><nav class="links" aria-label="Main"><a href="index.html">Home</a><a href="courses.html">Courses</a><a href="resources.html">Free Resources</a><a href="blog.html">Blog</a><a href="about.html">About</a><a href="contact.html">Contact</a><a class="btn" id="nav-enroll" data-track="enroll_now_click" data-label="nav" data-modal="Demo: enrolment is not live in this prototype." href="#">Enroll Now</a></nav></div></header>
-<main><section><div class="wrap lay"><div><div class="player" id="video-preview" role="button" tabindex="0" data-track="video_preview_click" data-label="player" data-demo="Demo: no real video in this prototype."><div class="play">▶</div><small>Video thumbnail placeholder</small></div><br><p class="demo">Demo lesson</p><h1 id="l-title" style="font-size:1.8rem">Introduction to Electric Charge</h1><p><b id="l-ch">Ch 1: Electric Charges and Fields</b></p><p id="l-desc" class="sub">Properties of charge, conductors, insulators and charging methods.</p><div class="row"><button class="btn o" id="prev">← Previous Lesson</button><button class="btn" id="next">Next Lesson →</button></div></div><aside class="rel"><h3>Related Lessons</h3><br><a href="#" data-t="Introduction to Electric Charge" data-c="Ch 1: Electric Charges and Fields" data-d="Properties of charge, conductors, insulators and charging methods." class=on><b>1.</b><span>Introduction to Electric Charge<br><small>Ch 1: Electric Charges and Fields</small></span></a><a href="#" data-t="Coulomb’s Law" data-c="Ch 1: Electric Charges and Fields" data-d="Force between point charges and the principle of superposition."><b>2.</b><span>Coulomb’s Law<br><small>Ch 1: Electric Charges and Fields</small></span></a><a href="#" data-t="Electric Field Lines" data-c="Ch 1: Electric Charges and Fields" data-d="Visualising fields and their properties."><b>3.</b><span>Electric Field Lines<br><small>Ch 1: Electric Charges and Fields</small></span></a><a href="#" data-t="Gauss’s Law" data-c="Ch 1: Electric Charges and Fields" data-d="Flux, Gaussian surfaces and symmetric charge distributions."><b>4.</b><span>Gauss’s Law<br><small>Ch 1: Electric Charges and Fields</small></span></a></aside></div></section></main>
-<footer><div class="wrap"><div class="g"><div><h3>My Physics Academia</h3><p>Understand Physics. Explore the Universe.</p></div><div><h3>Learn</h3><a href="courses.html">Courses</a><a href="pricing.html">Pricing</a><a href="lessons.html">Video Lessons</a><a href="resources.html">Free Resources</a></div><div><h3>Company</h3><a href="about.html">About</a><a href="blog.html">Blog</a><a href="contact.html">Contact</a><a href="admin.html">Admin (demo)</a></div></div><p class="copy">© 2026 My Physics Academia. Prototype with sample content; prices and testimonials are demo data.</p></div></footer>
+<main>
+<section><div class="wrap">
+<div class="preview-intro"><p class="demo">Free Preview</p><h1 style="font-size:1.9rem">Preview Lessons</h1><p class="sub">Explore selected Physics lessons before choosing a course.</p></div>
+<div class="lay">
+<div>
+<div class="player" id="preview-player"><div class="preview-placeholder"><span>▶</span><small>Select a preview lesson to begin</small></div></div>
+<br><p class="demo">Preview lesson</p>
+<h2 id="preview-title" style="font-size:1.55rem">Choose a lesson</h2>
+<p><b id="preview-chapter">Class and chapter details will appear here</b></p>
+<p id="preview-description" class="sub">Select one of the available preview lessons.</p>
+<p id="preview-status" class="preview-status" role="status" aria-live="polite">Loading preview lessons...</p>
+</div>
+<aside class="rel"><h3>Available Previews</h3><br><div id="preview-list" class="preview-list"><p>Loading preview lessons...</p></div><p class="preview-note">Each preview can be started once per browser. Starting another preview stops the current player.</p></aside>
+</div>
+</div></section>
+</main>
+<footer><div class="wrap"><div class="g"><div><h3>My Physics Academia</h3><p>Understand Physics. Explore the Universe.</p></div><div><h3>Learn</h3><a href="courses.html">Courses</a><a href="pricing.html">Pricing</a><a href="lessons.html">Preview Lessons</a><a href="resources.html">Free Resources</a></div><div><h3>Company</h3><a href="about.html">About</a><a href="blog.html">Blog</a><a href="contact.html">Contact</a><a href="admin.html">Admin (demo)</a></div></div><p class="copy">© 2026 My Physics Academia.</p></div></footer>
 <div id="toast" role="status"></div><div id="modal"><div class="card"><h3>Demo Notice</h3><p></p><br><button class="btn" data-close>Close</button></div></div>
-<script src="js/script.js"></script></body></html>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
+<script src="js/script.js"></script>
+<script src="js/preview.js"></script>
+</body>
+</html>
