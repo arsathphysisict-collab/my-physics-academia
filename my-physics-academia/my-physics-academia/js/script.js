@@ -77,7 +77,7 @@ async function loadAdminDashboardData() {
             { data: concepts, error: conceptsError, count: conceptCount },
             { data: chapters, error: chaptersError }
         ] = await Promise.all([
-            supabaseClient.from('concepts').select('id,title,chapter_id,category,is_published,mux_status,sort_order', { count: 'exact' }).order('created_at', { ascending: false }),
+            supabaseClient.from('concepts').select('id,title,chapter_id,category,is_published,mux_status,sort_order,is_preview,thumbnail_url', { count: 'exact' }).order('created_at', { ascending: false }),
             supabaseClient.from('chapters').select('id,title,class_level,sort_order').order('class_level', { ascending: true }).order('sort_order', { ascending: true }).range(0, 999)
         ]);
 
@@ -102,7 +102,7 @@ async function loadAdminDashboardData() {
                     const chapterLabel = chapter
                         ? 'Class ' + chapter.class_level + ' / Chapter ' + chapter.sort_order + ': ' + ((COURSES[Number(chapter.class_level)] && COURSES[Number(chapter.class_level)].ch[Number(chapter.sort_order) - 1]) || chapter.title)
                         : 'Chapter unavailable';
-                    return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td><td>' + (concept.is_published ? 'Published' : 'Draft') + '</td><td><button type="button" class="btn ' + (concept.is_published ? 'o' : '') + '" data-publish-concept="' + escapeAdminText(concept.id) + '" data-published="' + (concept.is_published ? 'true' : 'false') + '" ' + (concept.mux_status === 'ready' ? '' : 'disabled title="Video must be ready before publishing"') + '>' + (concept.is_published ? 'Unpublish' : 'Publish') + '</button></td></tr>';
+                    return '<tr><td>' + escapeAdminText(concept.title) + '</td><td>' + escapeAdminText(chapterLabel) + '</td><td>' + escapeAdminText(concept.category) + '</td><td>' + escapeAdminText(concept.mux_status || 'Not uploaded') + '</td><td>' + (concept.is_published ? 'Published' : 'Draft') + '</td><td>' + (concept.is_preview ? (concept.thumbnail_url ? '<img src="' + escapeAdminText(concept.thumbnail_url) + '" alt="Current preview thumbnail" style="width:76px;height:44px;object-fit:cover;border-radius:6px;display:block;margin-bottom:6px">' : '<span style="display:block;font-size:12px;margin-bottom:6px">No thumbnail set</span>') + '<input type="file" accept="image/png,image/jpeg,image/webp" data-thumbnail-upload="' + escapeAdminText(concept.id) + '" aria-label="Upload preview thumbnail" style="max-width:180px;font-size:12px">' : '<span style="color:#667085;font-size:12px">Not a preview</span>') + '</td><td><button type="button" class="btn ' + (concept.is_published ? 'o' : '') + '" data-publish-concept="' + escapeAdminText(concept.id) + '" data-published="' + (concept.is_published ? 'true' : 'false') + '" ' + (concept.mux_status === 'ready' ? '' : 'disabled title="Video must be ready before publishing"') + '>' + (concept.is_published ? 'Unpublish' : 'Publish') + '</button></td></tr>';
                   }).join('')
                 : '<tr><td colspan="6">No concepts uploaded yet. Add a concept using Upload Interface.</td></tr>';
         }
@@ -116,6 +116,58 @@ async function loadAdminDashboardData() {
 
 
         const manageLessonsBody = document.getElementById('admin-lessons-list');
+        if (manageLessonsBody && !manageLessonsBody.dataset.thumbnailHandlerAttached) {
+            manageLessonsBody.dataset.thumbnailHandlerAttached = 'true';
+            manageLessonsBody.addEventListener('change', async (event) => {
+                const input = event.target.closest('[data-thumbnail-upload]');
+                if (!input || !input.files || !input.files[0]) return;
+                const file = input.files[0];
+                const conceptId = input.dataset.thumbnailUpload;
+                if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+                    toast('Choose a PNG, JPG or WebP image.');
+                    input.value = '';
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    toast('Thumbnail must be 5 MB or smaller.');
+                    input.value = '';
+                    return;
+                }
+                input.disabled = true;
+                try {
+                    const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+                    if (authError || !authData.user) throw new Error('Your login session has expired. Please log in again.');
+                    const { data: adminRecord, error: adminError } = await supabaseClient
+                        .from('admin_users').select('user_id').eq('user_id', authData.user.id).maybeSingle();
+                    if (adminError || !adminRecord) throw new Error('Admin permission could not be verified.');
+
+                    const extension = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1];
+                    const storagePath = conceptId + '/' + crypto.randomUUID() + '.' + extension;
+                    const { error: uploadError } = await supabaseClient.storage
+                        .from('preview-thumbnails')
+                        .upload(storagePath, file, { contentType: file.type, upsert: false });
+                    if (uploadError) throw uploadError;
+
+                    const { data: publicData } = supabaseClient.storage
+                        .from('preview-thumbnails')
+                        .getPublicUrl(storagePath);
+                    const thumbnailUrl = publicData && publicData.publicUrl;
+                    if (!thumbnailUrl) throw new Error('Could not create the thumbnail URL.');
+
+                    const { error: updateError } = await supabaseClient
+                        .from('concepts').update({ thumbnail_url: thumbnailUrl }).eq('id', conceptId);
+                    if (updateError) throw updateError;
+                    toast('Preview thumbnail saved successfully.');
+                    await loadAdminDashboardData();
+                } catch (error) {
+                    console.error('Preview thumbnail upload failed:', error);
+                    toast(error.message || 'Could not upload the thumbnail.');
+                    input.disabled = false;
+                    input.value = '';
+                }
+            });
+        }
+
         if (manageLessonsBody && !manageLessonsBody.dataset.publishHandlerAttached) {
             manageLessonsBody.dataset.publishHandlerAttached = 'true';
             manageLessonsBody.addEventListener('click', async (event) => {
