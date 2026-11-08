@@ -76,22 +76,8 @@
 <section id="uploaded-videos-section" hidden><h3>Uploaded Videos</h3><table><thead><tr><th>Concept Name</th><th>Class &amp; Chapter</th><th>Lesson</th><th>Video Status</th><th>Publish Status</th><th>Video Thumbnail &amp; Preview Placement</th><th>Action</th></tr></thead><tbody id="admin-lessons-list"><tr><td colspan="7">Loading uploaded videos...</td></tr></tbody></table></section>
 </div>
 <div id="up" class="pane card">
-<h2>Upload Concept Video</h2>
-<p>Choose the class, chapter and lesson. Then enter the concept name and upload its video directly to Mux.</p>
-<form id="upload-video-form">
-<label>Select Class<select id="upload-class-select" required><option value="">Select class</option><option value="11">Class 11</option><option value="12">Class 12</option></select></label>
-<label>Select Chapter<select id="upload-chapter-select" required disabled><option value="">Select a class first</option></select></label>
-<label>Select Lesson<select id="upload-lesson-select" required disabled><option value="">Select a chapter first</option></select></label>
-<label>Concept Name<input type="text" id="upload-concept-title" maxlength="180" placeholder="Example: Newton's First Law" required></label>
-<label>Choose Video File<input type="file" id="lesson-video-file" accept="video/*" required></label>
-<p id="upload-video-error" style="color:red" role="alert"></p>
-<div id="upload-progress-wrap" style="display:none;margin:14px 0"><div style="display:flex;justify-content:space-between"><span id="upload-status">Preparing upload...</span><span id="upload-percent">0%</span></div><progress id="upload-progress" value="0" max="100" style="width:100%"></progress></div>
-<button type="submit" class="btn" id="start-video-upload">Upload Video</button>
-</form>
-<hr style="margin:24px 0">
-<section id="create-concept-from-asset">
-<h3>Create Concept from Existing Asset</h3>
-<p>Use a video already in the Mux Asset Library. Choose the clip range for this concept.</p>
+<h2>Create Concept from Existing Asset</h2>
+<p>Select a lesson and link a ready video from the Mux Asset Library. Set the clip range for this concept.</p>
 <form id="asset-concept-form">
 <label>Select Class<select id="asset-concept-class" required><option value="">Select class</option><option value="11">Class 11</option><option value="12">Class 12</option></select></label>
 <label>Select Chapter<select id="asset-concept-chapter" required disabled><option value="">Select a class first</option></select></label>
@@ -103,9 +89,9 @@
 <label style="flex:1">End Time (seconds)<input type="number" id="asset-concept-end" min="0.001" step="0.001" required placeholder="Example: 120"></label>
 </div>
 <p id="asset-concept-error" style="color:red" role="alert"></p>
-<button type="submit" class="btn" id="asset-concept-save">Save Concept</button>
+<button type="submit" class="btn" id="asset-concept-save">Create Concept</button>
 </form>
-</section></div>
+</div>
 <div id="ma" class="pane card">
 <h2>Mux Asset Library</h2>
 <p>Upload videos to the central library. These assets can later be linked to multiple concepts.</p>
