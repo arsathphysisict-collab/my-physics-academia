@@ -51,6 +51,29 @@
     }
   }
 
+  async function getPostLoginUrl() {
+    const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !authData.user) return "index.html";
+
+    const { data, error } = await supabaseClient
+      .from("student_course_access")
+      .select("course_id")
+      .eq("user_id", authData.user.id)
+      .eq("access_status", "active");
+
+    if (error) {
+      console.error("Could not verify student course access:", error);
+      return "index.html";
+    }
+
+    const validCourseIds = new Set([
+      "0ec687ef-1617-43c1-8777-c56f6ce835e1",
+      "a0678519-b9ae-4845-a979-515107a34cb9"
+    ]);
+    const hasActiveCourse = (data || []).some(row => validCourseIds.has(row.course_id));
+    return hasActiveCourse ? getSafeReturnUrl() : "index.html";
+  }
+
   loginTab.addEventListener("click", () => setMode("login"));
   signupTab.addEventListener("click", () => setMode("signup"));
 
@@ -65,7 +88,7 @@
       const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (error) throw error;
       setStatus("Login successful. Redirecting...");
-      location.assign(getSafeReturnUrl());
+      location.assign(await getPostLoginUrl());
     } catch (error) {
       setStatus(error.message || "Login failed. Please check your details.", true);
     } finally {
@@ -98,7 +121,7 @@
       if (error) throw error;
       if (data.session) {
         setStatus("Student account created. Redirecting...");
-        location.assign(getSafeReturnUrl());
+        location.assign(await getPostLoginUrl());
       } else {
         setMode("login");
         setStatus("Account created. Please confirm your email using the link we sent, then log in here.");
