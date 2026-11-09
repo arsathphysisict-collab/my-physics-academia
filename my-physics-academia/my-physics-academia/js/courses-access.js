@@ -34,6 +34,7 @@
         status.className = 'course-access-status';
         status.textContent = 'Already Enrolled';
         status.setAttribute('role', 'status');
+        status.style.cssText = 'display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:#edf8f1;color:#247447;font-size:.88rem;font-weight:700;';
 
         const openButton = document.createElement('a');
         openButton.className = 'btn';
