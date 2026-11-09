@@ -9,12 +9,136 @@
   const titleEl = document.getElementById('student-course-title');
   const countEl = document.getElementById('student-course-count');
   const syllabusEl = document.getElementById('student-course-syllabus');
+  const playerSection = document.getElementById('student-video-section');
+  const playerTitle = document.getElementById('student-video-title');
+  const playerStatus = document.getElementById('student-video-status');
+  const playerContainer = document.getElementById('student-video-player');
+  let activePlayer = null;
 
   function showMessage(message) {
     const box = document.createElement('div');
     box.className = 'student-course-message';
     box.textContent = message;
     syllabusEl.replaceChildren(box);
+  }
+
+  function showPlayerStatus(message, isError = false) {
+    playerStatus.textContent = message;
+    playerStatus.classList.toggle('error', isError);
+  }
+
+  function stopCurrentPlayer() {
+    if (activePlayer) {
+      try { activePlayer.pause(); } catch (_) {}
+      activePlayer.remove();
+      activePlayer = null;
+    }
+    playerContainer.replaceChildren();
+  }
+
+  async function playConcept(concept, button) {
+    if (!concept.concept_id && !concept.id) {
+      showPlayerStatus('This concept is missing its video identifier. Please contact the administrator.', true);
+      return;
+    }
+
+    document.querySelectorAll('.student-concept-button').forEach(item => {
+      item.classList.remove('active');
+      item.disabled = false;
+    });
+    button.classList.add('active');
+    button.disabled = true;
+    playerSection.hidden = false;
+    playerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    playerTitle.textContent = concept.concept_title || 'Course video';
+    showPlayerStatus('Checking your course access and preparing the video...');
+    stopCurrentPlayer();
+
+    try {
+      const { data, error } = await supabaseClient.functions.invoke('get-paid-playback', {
+        body: { concept_id: concept.concept_id || concept.id }
+      });
+
+      if (error) {
+        let detail = '';
+        try {
+          if (error.context && typeof error.context.json === 'function') {
+            const responseBody = await error.context.json();
+            detail = responseBody.error || responseBody.message || '';
+          }
+        } catch (_) {}
+        if (error.context && error.context.status === 401) {
+          throw new Error(detail || 'Your login session has expired. Please log in again.');
+        }
+        if (error.context && error.context.status === 403) {
+          throw new Error(detail || 'You do not have active access to this course.');
+        }
+        throw new Error(detail || error.message || 'Could not prepare this video.');
+      }
+
+      if (!data || !data.playbackId || !data.token) {
+        throw new Error((data && data.error) || 'Secure playback details were not returned.');
+      }
+
+      const clipStart = Number(data.startTime ?? 0);
+      const clipEnd = data.endTime == null ? null : Number(data.endTime);
+      if (!Number.isFinite(clipStart) || clipStart < 0 ||
+          (clipEnd !== null && (!Number.isFinite(clipEnd) || clipEnd <= clipStart))) {
+        throw new Error('The video clip range is invalid.');
+      }
+
+      await customElements.whenDefined('mux-player');
+      const player = document.createElement('mux-player');
+      player.setAttribute('stream-type', 'on-demand');
+      player.setAttribute('playsinline', '');
+      player.setAttribute('controls', '');
+      player.style.width = '100%';
+      player.style.height = '100%';
+      player.style.display = 'block';
+      player.style.setProperty('--media-object-fit', 'contain');
+
+      // Attach the signed token before the playback ID so the first request is authorized.
+      player.playbackToken = data.token;
+      player.tokens = { playback: data.token };
+      player.playbackId = data.playbackId;
+
+      let clipFinished = false;
+      const enforceClipStart = () => {
+        if (player.currentTime < clipStart) player.currentTime = clipStart;
+      };
+      player.addEventListener('loadedmetadata', enforceClipStart);
+      player.addEventListener('canplay', enforceClipStart);
+      player.addEventListener('seeking', () => {
+        if (player.currentTime < clipStart) player.currentTime = clipStart;
+        if (clipEnd !== null && player.currentTime > clipEnd) player.currentTime = clipEnd;
+      });
+      player.addEventListener('timeupdate', () => {
+        if (clipEnd !== null && !clipFinished && player.currentTime >= clipEnd) {
+          clipFinished = true;
+          player.pause();
+          player.currentTime = clipEnd;
+          showPlayerStatus('This lesson video has finished.');
+        }
+      });
+      player.addEventListener('error', () => {
+        showPlayerStatus('The video could not be played. Please refresh and try again.', true);
+      });
+      player.addEventListener('play', () => {
+        if (clipEnd !== null && player.currentTime >= clipEnd - 0.05) {
+          clipFinished = false;
+          player.currentTime = clipStart;
+        }
+      });
+
+      playerContainer.replaceChildren(player);
+      activePlayer = player;
+      showPlayerStatus('Your video is ready. Press Play to start.');
+    } catch (error) {
+      console.error('Paid playback request failed:', error);
+      showPlayerStatus(error.message || 'Could not start this video. Please try again.', true);
+      button.disabled = false;
+      button.classList.remove('active');
+    }
   }
 
   async function init() {
@@ -114,7 +238,12 @@
             list.className = 'student-concepts';
             lessonConcepts.sort((a,b) => Number(a.sort_order) - Number(b.sort_order)).forEach(concept => {
               const item = document.createElement('li');
-              item.textContent = concept.concept_title;
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.className = 'student-concept-button';
+              button.textContent = concept.concept_title;
+              button.addEventListener('click', () => playConcept(concept, button));
+              item.appendChild(button);
               list.appendChild(item);
             });
             lessonDetails.appendChild(list);
