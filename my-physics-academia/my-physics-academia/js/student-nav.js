@@ -38,16 +38,11 @@
       ];
       const currentPage = location.pathname.split('/').pop() || 'index.html';
       nav.replaceChildren();
-      let profileLink = null;
       links.forEach(([label, href]) => {
         const link = document.createElement('a');
         link.textContent = label;
         link.href = href;
         if (href === currentPage) link.classList.add('on');
-        if (label === 'Profile') {
-          link.classList.add('student-profile-link');
-          profileLink = link;
-        }
         nav.appendChild(link);
       });
       const brand = document.querySelector('header .brand');
