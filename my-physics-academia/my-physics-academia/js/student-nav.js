@@ -19,7 +19,13 @@
       }
       const { data, error } = await supabaseClient.auth.getUser();
       if (error) throw error;
-      if (!data.user) return;
+      if (!data.user) {
+        const enroll = document.getElementById('nav-enroll');
+        if (enroll) enroll.style.visibility = 'visible';
+        return;
+      }
+      const enroll = document.getElementById('nav-enroll');
+      if (enroll) enroll.remove();
 
       const links = [
         ['My Learning', 'student-home.html'],
@@ -43,6 +49,8 @@
       const brand = document.querySelector('header .brand');
       if (brand) brand.href = 'student-home.html';
     } catch (error) {
+      const enroll = document.getElementById('nav-enroll');
+      if (enroll) enroll.style.visibility = 'visible';
       console.error('Student navigation could not be updated:', error);
     }
   }
