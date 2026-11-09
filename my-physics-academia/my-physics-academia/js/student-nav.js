@@ -9,10 +9,16 @@
     });
   }
   async function initStudentNavigation() {
-    const navLink = document.getElementById('student-nav-link') ||
-      [...document.querySelectorAll('nav.links a')].find(a =>
+    const nav = document.querySelector('nav.links');
+    if (!nav) return;
+    let navLink = document.getElementById('student-nav-link') ||
+      [...nav.querySelectorAll('a')].find(a =>
         a.textContent.trim() === 'Student Login' || a.textContent.trim() === 'Profile');
-    if (!navLink) return;
+    if (!navLink) {
+      navLink = document.createElement('a');
+      navLink.id = 'student-nav-link';
+      nav.appendChild(navLink);
+    }
     try {
       if (typeof supabaseClient === 'undefined') {
         if (!window.supabase) await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
