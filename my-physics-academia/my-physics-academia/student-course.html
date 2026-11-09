@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Course | My Physics Academia</title>
+<link rel="icon" href="images/logo.svg"><link rel="stylesheet" href="css/style.css">
+<style>
+.student-course-wrap{max-width:1100px;margin:42px auto;padding:0 18px}
+.student-course-hero{padding:28px;border-radius:18px;background:linear-gradient(120deg,#102d59,#245ca6);color:#fff}
+.student-course-hero .demo{display:inline-block;color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);padding:5px 12px;border-radius:20px;font-weight:700;letter-spacing:.08em}
+.student-course-hero h1{color:#fff;margin:12px 0 8px}.student-course-hero p{color:#e4edff;margin:0}
+.student-course-content{margin-top:30px}.student-chapter{background:#fff;border:1px solid #e5eaf3;border-radius:14px;padding:18px 20px;margin:14px 0;box-shadow:0 6px 20px rgba(12,35,75,.04)}
+.student-chapter>summary{font-size:1.08rem;font-weight:700;cursor:pointer}
+.student-lesson-list{padding:10px 0 0 12px}.student-lesson{border-top:1px solid #edf0f5;padding:14px 4px}.student-lesson>summary{font-weight:600;cursor:pointer}
+.student-concepts{margin:12px 0 0;padding-left:22px}.student-concepts li{padding:5px 0;color:#344054}
+.student-course-message{padding:22px;border:1px dashed #cbd5e1;border-radius:14px;background:#fff;color:#667085}
+.student-course-back{display:inline-block;margin-top:18px}
+</style>
+</head>
+<body>
+<header><div class="wrap nav"><a class="brand" href="student-home.html"><img src="images/logo.svg" alt="My Physics Academia logo">MY PHYSICS ACADEMIA</a>
+<button id="burger" aria-label="Open menu">☰</button><nav class="links" aria-label="Student navigation">
+<a href="student-home.html">My Learning</a><a href="courses.html">Courses</a><a href="resources.html">Free Resources</a><a href="blog.html">Blog</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="profile.html">Profile</a>
+</nav></div></header>
+<main class="student-course-wrap">
+<section class="student-course-hero"><span class="demo">YOUR COURSE</span><h1 id="student-course-title">Loading course...</h1><p id="student-course-count">Verifying your course access...</p></section>
+<section class="student-course-content"><div id="student-course-syllabus" aria-live="polite"><div class="student-course-message">Loading your course content...</div></div></section>
+<a class="btn o student-course-back" href="student-home.html">← Back to My Learning</a>
+</main>
+<footer><div class="wrap"><p class="copy">© 2026 My Physics Academia</p></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script><script src="js/student-course.js"></script>
+<script>document.getElementById('burger').addEventListener('click',()=>document.querySelector('.links').classList.toggle('open'));</script>
+</body></html>
