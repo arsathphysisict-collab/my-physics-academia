@@ -37,7 +37,7 @@
         detail.textContent = 'Your course access is active.';
         const link = document.createElement('a');
         link.className = 'btn';
-        link.href = 'course-details.html?class=' + course.level;
+        link.href = 'student-course.html?class=' + course.level;
         link.textContent = 'Open My Course';
         card.append(title, detail, link);
         box.appendChild(card);
