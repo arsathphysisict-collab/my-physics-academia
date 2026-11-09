@@ -7,7 +7,7 @@ function track(name, el){
 const $=(s,c=document)=>c.querySelector(s), $$=(s,c=document)=>[...c.querySelectorAll(s)];
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600)}
 function modal(m){$('#modal p').textContent=m;$('#modal').classList.add('show')}
-$('#burger').onclick=()=>$('.links').classList.toggle('open');
+$('#burger').onclick=()=>{const menu=$('.links');const isOpen=menu.classList.toggle('open');$('#burger').setAttribute('aria-expanded',String(isOpen));};
 $('#modal').onclick=e=>{if(e.target.id==='modal'||e.target.dataset.close!==undefined)$('#modal').classList.remove('show')};
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-track],[data-demo],[data-modal]');if(!el)return;
