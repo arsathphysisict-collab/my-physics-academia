@@ -19,14 +19,11 @@
         .select('course_id').eq('user_id', auth.user.id).eq('access_status', 'active');
       if (error) throw error;
       const courses = (data || []).filter(row => COURSE_NAMES[row.course_id]);
-      box.replaceChildren();
       if (!courses.length) {
-        const empty = document.createElement('div');
-        empty.className = 'learning-empty';
-        empty.textContent = 'No active courses are linked to your account yet. Visit Courses to explore available Physics courses.';
-        box.appendChild(empty);
+        location.replace('index.html');
         return;
       }
+      box.replaceChildren();
       courses.forEach(row => {
         const course = COURSE_NAMES[row.course_id];
         const card = document.createElement('article');
