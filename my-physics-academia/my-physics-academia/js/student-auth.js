@@ -41,13 +41,13 @@
 
   function getSafeReturnUrl() {
     const requested = new URLSearchParams(location.search).get("return");
-    if (!requested) return "courses.html";
+    if (!requested) return "student-home.html";
     try {
       const url = new URL(requested, location.origin);
-      if (url.origin !== location.origin || url.pathname.endsWith("/student-login.html")) return "courses.html";
+      if (url.origin !== location.origin || url.pathname.endsWith("/student-login.html")) return "student-home.html";
       return url.href;
     } catch (_) {
-      return "courses.html";
+      return "student-home.html";
     }
   }
 
