@@ -41,11 +41,11 @@
 <a class="btn" href="student-home.html" style="display:block;text-align:center;margin:16px 0">Continue to My Learning</a>
 <button type="button" class="btn o" id="student-logout-button" style="width:100%">Logout</button>
 </div>
-<form class="student-auth-form" id="student-login-form">
+<form class="student-auth-form" id="student-login-form" autocomplete="off">
 <label for="student-login-email">Email address</label>
-<input id="student-login-email" type="email" autocomplete="email" required>
+<input id="student-login-email" type="email" autocomplete="off" name="student-login-email" required>
 <label for="student-login-password">Password</label>
-<input id="student-login-password" type="password" autocomplete="current-password" required minlength="6">
+<input id="student-login-password" type="password" autocomplete="new-password" name="student-login-password" required minlength="6">
 <button class="btn" type="submit" id="student-login-submit">Login</button>
 </form>
 <form class="student-auth-form" id="student-signup-form" hidden>
