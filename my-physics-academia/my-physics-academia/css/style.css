@@ -43,3 +43,6 @@ footer{background:var(--navy);color:#b9ccf0;padding:48px 0 20px}footer h3{color:
 
 /* Prevent the public Enroll button flashing before student auth is resolved. */
 #nav-enroll{visibility:hidden}
+
+/* Keep the student-only Profile link hidden until account navigation is ready. */
+.student-profile-link{visibility:hidden}
