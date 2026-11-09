@@ -22,6 +22,7 @@
       if (!data.user) {
         const enroll = document.getElementById('nav-enroll');
         if (enroll) enroll.style.visibility = 'visible';
+        nav.style.visibility = 'visible';
         return;
       }
       const enroll = document.getElementById('nav-enroll');
@@ -50,12 +51,13 @@
         }
         nav.appendChild(link);
       });
-      if (profileLink) profileLink.style.visibility = 'visible';
       const brand = document.querySelector('header .brand');
       if (brand) brand.href = 'student-home.html';
+      nav.style.visibility = 'visible';
     } catch (error) {
       const enroll = document.getElementById('nav-enroll');
       if (enroll) enroll.style.visibility = 'visible';
+      nav.style.visibility = 'visible';
       console.error('Student navigation could not be updated:', error);
     }
   }
