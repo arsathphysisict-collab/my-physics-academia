@@ -1,5 +1,5 @@
-/* Demo-only interactions. No backend; NO tracking is active. */
-/* ---- dataLayer structure: connect to Google Tag Manager later ---- */
+/* Shared site interactions for public pages and the admin dashboard. */
+/* Interaction events are pushed to dataLayer; GTM tag behavior depends on container configuration. */
 window.dataLayer = window.dataLayer || [];
 function track(name, el){
   window.dataLayer.push({event:name, element_id:el.id||null, label:el.dataset.label||el.textContent.trim().slice(0,40), page:location.pathname});
