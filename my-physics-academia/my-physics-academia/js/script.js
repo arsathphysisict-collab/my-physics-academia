@@ -55,8 +55,29 @@ if($('#course-detail')) {
        return;
      }
 
-     // Preserve the existing hierarchy exactly: Class → Chapter → Lesson → Concept.
-     // The four Lesson records already stored in Manage Lessons remain distinct.
+     // A student's concepts are visible only when an active access row exists
+     // for this exact class course. Login alone never grants course access.
+     let hasCourseAccess = false;
+     try {
+       const { data: authData } = await supabaseClient.auth.getUser();
+       if (authData && authData.user) {
+         const { data: accessRows, error: accessError } = await supabaseClient
+           .from('student_course_access')
+           .select('course_id')
+           .eq('user_id', authData.user.id)
+           .eq('course_id', data[0].course_id)
+           .eq('access_status', 'active')
+           .limit(1);
+         if (accessError) throw accessError;
+         hasCourseAccess = Boolean(accessRows && accessRows.length);
+       }
+     } catch (accessCheckError) {
+       // Fail closed: if access cannot be verified, do not reveal concept names.
+       console.warn('Student course access could not be verified:', accessCheckError);
+       hasCourseAccess = false;
+     }
+
+     // Preserve the exact hierarchy: Class → Chapter → Lesson → Concept.
      const chapters = new Map();
      data.forEach(row => {
        if (!chapters.has(row.chapter_id)) {
@@ -100,37 +121,55 @@ if($('#course-detail')) {
        const lessonList = document.createElement('div');
        lessonList.className = 'course-lesson-list';
 
-       [...chapter.lessons.values()].sort((a,b) => Number(a.order) - Number(b.order)).forEach((lesson, lessonIndex) => {
+       [...chapter.lessons.values()].sort((a,b) => Number(a.order) - Number(b.order)).forEach(lesson => {
          const lessonDetails = document.createElement('details');
          lessonDetails.className = 'course-lesson';
          const lessonSummary = document.createElement('summary');
          lessonSummary.textContent = lesson.title;
          lessonDetails.appendChild(lessonSummary);
 
-         if (lesson.concepts.length) {
-           const conceptList = document.createElement('ul');
-           lesson.concepts.forEach(concept => {
-             const conceptItem = document.createElement('li');
-             const conceptButton = document.createElement('button');
-             conceptButton.type = 'button';
-             conceptButton.className = 'course-concept-link';
-             conceptButton.textContent = concept.title;
-             conceptButton.addEventListener('click', () => {
-               if (concept.isPreview && concept.isPublished) {
-                 location.href = 'lessons.html?class=' + n + '&concept=' + encodeURIComponent(concept.id);
-               } else {
-                 modal('This concept is part of the full Class ' + n + ' Physics course. Use the Buy Now option to view course purchase details.');
-               }
+         if (hasCourseAccess) {
+           const availableConcepts = lesson.concepts.filter(concept => concept.isPublished);
+           if (availableConcepts.length) {
+             const conceptList = document.createElement('ul');
+             conceptList.className = 'course-concept-list';
+             availableConcepts.forEach(concept => {
+               const conceptItem = document.createElement('li');
+               const conceptButton = document.createElement('button');
+               conceptButton.type = 'button';
+               conceptButton.className = 'course-concept-link';
+               conceptButton.textContent = concept.title;
+               conceptButton.addEventListener('click', () => {
+                 modal('Your course access is active. Secure full-course video playback is being connected and will be available in the next step.');
+               });
+               conceptItem.appendChild(conceptButton);
+               conceptList.appendChild(conceptItem);
              });
-             conceptItem.appendChild(conceptButton);
-             conceptList.appendChild(conceptItem);
-           });
-           lessonDetails.appendChild(conceptList);
+             lessonDetails.appendChild(conceptList);
+           } else {
+             const note = document.createElement('p');
+             note.className = 'sub';
+             note.textContent = 'Concepts for this lesson will be available soon.';
+             lessonDetails.appendChild(note);
+           }
          } else {
-           const note = document.createElement('p');
-           note.className = 'sub';
-           note.textContent = 'Concepts will be added soon.';
-           lessonDetails.appendChild(note);
+           const previewConcept = lesson.concepts.find(concept => concept.isPreview && concept.isPublished);
+           const action = document.createElement('a');
+           action.className = 'btn' + (previewConcept ? '' : ' o');
+           action.textContent = previewConcept ? '▶ Preview Lesson' : 'Buy Now';
+           if (previewConcept) {
+             action.href = 'lessons.html?class=' + n + '&concept=' + encodeURIComponent(previewConcept.id);
+           } else {
+             action.href = '#buy-course';
+             action.addEventListener('click', event => {
+               event.preventDefault();
+               modal('The Class ' + n + ' Physics course is available for ' + fallback.p + '. Checkout will be connected in a later step.');
+             });
+           }
+           const actionWrap = document.createElement('div');
+           actionWrap.className = 'course-lesson-actions';
+           actionWrap.appendChild(action);
+           lessonDetails.appendChild(actionWrap);
          }
          lessonList.appendChild(lessonDetails);
        });
