@@ -43,7 +43,7 @@ if($('#course-detail')) {
    try {
      const { data, error } = await supabaseClient
        .from('student_course_syllabus')
-       .select('course_id,course_title,class_level,chapter_id,chapter_title,chapter_sort_order,lesson_id,lesson_title,lesson_description,duration_seconds,lesson_sort_order,concept_id,concept_title,concept_category,concept_is_preview,concept_is_published')
+       .select('course_id,course_title,class_level,chapter_id,chapter_title,chapter_sort_order,lesson_id,lesson_title,lesson_description,duration_seconds,lesson_sort_order,concept_id,concept_title,concept_is_preview,concept_is_published')
        .eq('class_level', n)
        .order('chapter_sort_order', { ascending: true })
        .order('lesson_sort_order', { ascending: true });
@@ -55,6 +55,8 @@ if($('#course-detail')) {
        return;
      }
 
+     // Preserve the existing hierarchy exactly: Class → Chapter → Lesson → Concept.
+     // The four Lesson records already stored in Manage Lessons remain distinct.
      const chapters = new Map();
      data.forEach(row => {
        if (!chapters.has(row.chapter_id)) {
@@ -67,18 +69,16 @@ if($('#course-detail')) {
        const chapter = chapters.get(row.chapter_id);
        if (!chapter.lessons.has(row.lesson_id)) {
          chapter.lessons.set(row.lesson_id, {
+           id: row.lesson_id,
            title: row.lesson_title,
-           description: row.lesson_description,
            order: row.lesson_sort_order,
-           categories: new Map()
+           concepts: []
          });
        }
        if (row.concept_id) {
          const lesson = chapter.lessons.get(row.lesson_id);
-         const categoryName = row.concept_category || 'Concepts';
-         if (!lesson.categories.has(categoryName)) lesson.categories.set(categoryName, []);
-         if (!lesson.categories.get(categoryName).some(item => item.id === row.concept_id)) {
-           lesson.categories.get(categoryName).push({
+         if (!lesson.concepts.some(item => item.id === row.concept_id)) {
+           lesson.concepts.push({
              id: row.concept_id,
              title: row.concept_title,
              isPreview: row.concept_is_preview === true,
@@ -94,9 +94,9 @@ if($('#course-detail')) {
 
      syllabus.replaceChildren();
      chapterList.forEach((chapter, chapterIndex) => {
-       const details = document.createElement('details');
-       const summary = document.createElement('summary');
-       summary.textContent = 'Chapter ' + (chapterIndex + 1) + ': ' + chapter.title;
+       const chapterDetails = document.createElement('details');
+       const chapterSummary = document.createElement('summary');
+       chapterSummary.textContent = 'Chapter ' + (chapterIndex + 1) + ': ' + chapter.title;
        const lessonList = document.createElement('div');
        lessonList.className = 'course-lesson-list';
 
@@ -104,33 +104,28 @@ if($('#course-detail')) {
          const lessonDetails = document.createElement('details');
          lessonDetails.className = 'course-lesson';
          const lessonSummary = document.createElement('summary');
-         lessonSummary.textContent = 'Lesson ' + (chapterIndex + 1) + '.' + (lessonIndex + 1) + ' – ' + lesson.title;
+         lessonSummary.textContent = lesson.title;
          lessonDetails.appendChild(lessonSummary);
 
-         if (lesson.categories.size) {
-           lesson.categories.forEach((concepts, categoryName) => {
-             const categoryHeading = document.createElement('h4');
-             categoryHeading.textContent = categoryName;
-             lessonDetails.appendChild(categoryHeading);
-             const conceptList = document.createElement('ul');
-             concepts.forEach(concept => {
-               const conceptItem = document.createElement('li');
-               const conceptButton = document.createElement('button');
-               conceptButton.type = 'button';
-               conceptButton.className = 'course-concept-link';
-               conceptButton.textContent = concept.title;
-               conceptButton.addEventListener('click', () => {
-                 if (concept.isPreview && concept.isPublished) {
-                   location.href = 'lessons.html?class=' + n + '&concept=' + encodeURIComponent(concept.id);
-                 } else {
-                   modal('This concept is part of the full Class ' + n + ' Physics course. Use the Buy Now option to view course purchase details.');
-                 }
-               });
-               conceptItem.appendChild(conceptButton);
-               conceptList.appendChild(conceptItem);
+         if (lesson.concepts.length) {
+           const conceptList = document.createElement('ul');
+           lesson.concepts.forEach(concept => {
+             const conceptItem = document.createElement('li');
+             const conceptButton = document.createElement('button');
+             conceptButton.type = 'button';
+             conceptButton.className = 'course-concept-link';
+             conceptButton.textContent = concept.title;
+             conceptButton.addEventListener('click', () => {
+               if (concept.isPreview && concept.isPublished) {
+                 location.href = 'lessons.html?class=' + n + '&concept=' + encodeURIComponent(concept.id);
+               } else {
+                 modal('This concept is part of the full Class ' + n + ' Physics course. Use the Buy Now option to view course purchase details.');
+               }
              });
-             lessonDetails.appendChild(conceptList);
+             conceptItem.appendChild(conceptButton);
+             conceptList.appendChild(conceptItem);
            });
+           lessonDetails.appendChild(conceptList);
          } else {
            const note = document.createElement('p');
            note.className = 'sub';
@@ -140,8 +135,8 @@ if($('#course-detail')) {
          lessonList.appendChild(lessonDetails);
        });
 
-       details.append(summary, lessonList);
-       syllabus.appendChild(details);
+       chapterDetails.append(chapterSummary, lessonList);
+       syllabus.appendChild(chapterDetails);
      });
 
      learn.replaceChildren();
