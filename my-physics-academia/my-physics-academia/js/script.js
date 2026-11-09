@@ -43,46 +43,104 @@ if($('#course-detail')) {
    try {
      const { data, error } = await supabaseClient
        .from('student_course_syllabus')
-       .select('course_id,course_title,class_level,chapter_id,chapter_title,chapter_sort_order,lesson_id,lesson_title,lesson_description,duration_seconds,lesson_sort_order')
+       .select('course_id,course_title,class_level,chapter_id,chapter_title,chapter_sort_order,lesson_id,lesson_title,lesson_description,duration_seconds,lesson_sort_order,concept_id,concept_title,concept_category,concept_is_preview,concept_is_published')
        .eq('class_level', n)
        .order('chapter_sort_order', { ascending: true })
        .order('lesson_sort_order', { ascending: true });
      if (error) throw error;
      if (!data || data.length === 0) {
        count.textContent = 'Course syllabus will be available soon.';
-       syllabus.textContent = 'The course is not published yet. Please check back later.';
+       syllabus.textContent = 'Course curriculum is being prepared. Please check back later.';
        learn.replaceChildren();
        return;
      }
 
-     title.textContent = data[0].course_title;
      const chapters = new Map();
      data.forEach(row => {
        if (!chapters.has(row.chapter_id)) {
          chapters.set(row.chapter_id, {
            title: row.chapter_title,
            order: row.chapter_sort_order,
-           lessons: []
+           lessons: new Map()
          });
        }
-       chapters.get(row.chapter_id).lessons.push(row);
+       const chapter = chapters.get(row.chapter_id);
+       if (!chapter.lessons.has(row.lesson_id)) {
+         chapter.lessons.set(row.lesson_id, {
+           title: row.lesson_title,
+           description: row.lesson_description,
+           order: row.lesson_sort_order,
+           categories: new Map()
+         });
+       }
+       if (row.concept_id) {
+         const lesson = chapter.lessons.get(row.lesson_id);
+         const categoryName = row.concept_category || 'Concepts';
+         if (!lesson.categories.has(categoryName)) lesson.categories.set(categoryName, []);
+         if (!lesson.categories.get(categoryName).some(item => item.id === row.concept_id)) {
+           lesson.categories.get(categoryName).push({
+             id: row.concept_id,
+             title: row.concept_title,
+             isPreview: row.concept_is_preview === true,
+             isPublished: row.concept_is_published === true
+           });
+         }
+       }
      });
+
      const chapterList = [...chapters.values()].sort((a,b) => Number(a.order) - Number(b.order));
-     count.textContent = chapterList.length + ' chapters · ' + data.length + ' lessons';
+     const lessonCount = chapterList.reduce((total, chapter) => total + chapter.lessons.size, 0);
+     count.textContent = chapterList.length + ' chapters · ' + lessonCount + ' lessons';
 
      syllabus.replaceChildren();
-     chapterList.forEach((chapter, index) => {
+     chapterList.forEach((chapter, chapterIndex) => {
        const details = document.createElement('details');
        const summary = document.createElement('summary');
-       summary.textContent = 'Chapter ' + (index + 1) + ': ' + chapter.title;
-       const list = document.createElement('ul');
-       chapter.lessons.forEach((lesson, lessonIndex) => {
-         const item = document.createElement('li');
-         item.textContent = 'Lesson ' + (index + 1) + '.' + (lessonIndex + 1) + ' – ' + lesson.lesson_title;
-         if (lesson.lesson_description) item.title = lesson.lesson_description;
-         list.appendChild(item);
+       summary.textContent = 'Chapter ' + (chapterIndex + 1) + ': ' + chapter.title;
+       const lessonList = document.createElement('div');
+       lessonList.className = 'course-lesson-list';
+
+       [...chapter.lessons.values()].sort((a,b) => Number(a.order) - Number(b.order)).forEach((lesson, lessonIndex) => {
+         const lessonDetails = document.createElement('details');
+         lessonDetails.className = 'course-lesson';
+         const lessonSummary = document.createElement('summary');
+         lessonSummary.textContent = 'Lesson ' + (chapterIndex + 1) + '.' + (lessonIndex + 1) + ' – ' + lesson.title;
+         lessonDetails.appendChild(lessonSummary);
+
+         if (lesson.categories.size) {
+           lesson.categories.forEach((concepts, categoryName) => {
+             const categoryHeading = document.createElement('h4');
+             categoryHeading.textContent = categoryName;
+             lessonDetails.appendChild(categoryHeading);
+             const conceptList = document.createElement('ul');
+             concepts.forEach(concept => {
+               const conceptItem = document.createElement('li');
+               const conceptButton = document.createElement('button');
+               conceptButton.type = 'button';
+               conceptButton.className = 'course-concept-link';
+               conceptButton.textContent = concept.title;
+               conceptButton.addEventListener('click', () => {
+                 if (concept.isPreview && concept.isPublished) {
+                   location.href = 'lessons.html?class=' + n + '&concept=' + encodeURIComponent(concept.id);
+                 } else {
+                   modal('This concept is part of the full Class ' + n + ' Physics course. Use the Buy Now option to view course purchase details.');
+                 }
+               });
+               conceptItem.appendChild(conceptButton);
+               conceptList.appendChild(conceptItem);
+             });
+             lessonDetails.appendChild(conceptList);
+           });
+         } else {
+           const note = document.createElement('p');
+           note.className = 'sub';
+           note.textContent = 'Concepts will be added soon.';
+           lessonDetails.appendChild(note);
+         }
+         lessonList.appendChild(lessonDetails);
        });
-       details.append(summary, list);
+
+       details.append(summary, lessonList);
        syllabus.appendChild(details);
      });
 
