@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Learning | My Physics Academia</title>
+<link rel="icon" href="images/logo.svg"><link rel="stylesheet" href="css/style.css">
+<style>
+.learning-wrap{max-width:1100px;margin:48px auto;padding:0 18px}
+.learning-welcome{padding:30px;border-radius:18px;background:linear-gradient(120deg,#102d59,#245ca6);color:#fff}
+.learning-welcome h1{color:#fff;margin:0 0 8px}.learning-welcome p{margin:0;color:#e4edff}
+.learning-section{margin-top:34px}.learning-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:18px}
+.learning-card{background:#fff;border:1px solid #e5eaf3;border-radius:16px;padding:22px;box-shadow:0 8px 28px rgba(12,35,75,.06)}
+.learning-card h3{margin:0 0 10px}.learning-card p{color:#667085}.learning-card .btn{display:inline-block;margin-top:12px}
+.learning-empty{padding:24px;border:1px dashed #cbd5e1;border-radius:14px;color:#667085;background:#fff}
+#learning-status{margin-top:16px;color:#667085}
+</style>
+</head>
+<body>
+<header><div class="wrap nav"><a class="brand" href="student-home.html"><img src="images/logo.svg" alt="My Physics Academia logo">MY PHYSICS ACADEMIA</a>
+<button id="burger" aria-label="Open menu">☰</button><nav class="links" aria-label="Student navigation">
+<a class="on" href="student-home.html">My Learning</a><a href="courses.html">Courses</a><a href="resources.html">Free Resources</a><a href="blog.html">Blog</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="profile.html">Profile</a>
+</nav></div></header>
+<main class="learning-wrap">
+<section class="learning-welcome"><p class="demo">STUDENT LEARNING PORTAL</p><h1 id="learning-greeting">Welcome back!</h1><p>Your enrolled Physics courses, all in one place.</p></section>
+<section class="learning-section"><h2>My Courses</h2><p class="sub">Only courses activated for your account are shown here.</p>
+<div id="learning-courses" class="learning-grid"><p class="learning-empty">Loading your courses...</p></div>
+<p id="learning-status" role="status" aria-live="polite"></p>
+</section>
+</main>
+<footer><div class="wrap"><p class="copy">© 2026 My Physics Academia</p></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/supabase.js"></script><script src="js/student-home.js"></script>
+</body></html>
