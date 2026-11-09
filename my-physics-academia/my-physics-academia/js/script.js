@@ -19,13 +19,87 @@ $$('.rv').forEach(el=>new IntersectionObserver((en,ob)=>en.forEach(x=>{if(x.isIn
 const COURSES={
  11:{t:'Class 11 Physics',p:'₹2,999',ch:['Units and Measurements','Motion in a Straight Line','Motion in a Plane','Laws of Motion','Work, Energy and Power','System of Particles and Rotational Motion','Gravitation','Mechanical Properties of Solids','Mechanical Properties of Fluids','Thermal Properties of Matter','Thermodynamics','Kinetic Theory','Oscillations','Waves']},
  12:{t:'Class 12 Physics',p:'₹3,499',ch:['Electric Charges and Fields','Electrostatic Potential and Capacitance','Current Electricity','Moving Charges and Magnetism','Magnetism and Matter','Electromagnetic Induction','Alternating Current','Electromagnetic Waves','Ray Optics','Wave Optics','Dual Nature of Radiation and Matter','Atoms','Nuclei','Semiconductor Electronics']}};
-if($('#course-detail')){const n=new URLSearchParams(location.search).get('class')==='11'?11:12,c=COURSES[n];
- document.title=c.t+' Course | My Physics Academia';$('#cd-title').textContent=c.t;$('#cd-price').textContent=c.p;
- const previewCourseButton=$('#preview-course');
- if(previewCourseButton) previewCourseButton.href='lessons.html?class='+n;
- $('#cd-count').textContent=c.ch.length+' chapters · Demo content';
- $('#cd-syl').innerHTML=c.ch.map((x,i)=>`<details><summary>Chapter ${i+1}: ${x}</summary><ul><li>Lesson ${i+1}.1 – Core concepts</li><li>Lesson ${i+1}.2 – Derivations and laws</li><li>Lesson ${i+1}.3 – Solved numericals</li><li>Lesson ${i+1}.4 – Chapter recap quiz</li></ul></details>`).join('');
- $('#cd-learn').innerHTML=c.ch.slice(0,6).map(x=>`<li>${x}, explained concept-first</li>`).join('')}
+if($('#course-detail')) {
+ const n = new URLSearchParams(location.search).get('class') === '11' ? 11 : 12;
+ const fallback = COURSES[n];
+ const title = document.getElementById('cd-title');
+ const count = document.getElementById('cd-count');
+ const syllabus = document.getElementById('cd-syl');
+ const learn = document.getElementById('cd-learn');
+ const previewCourseButton = document.getElementById('preview-course');
+
+ document.title = fallback.t + ' Course | My Physics Academia';
+ title.textContent = fallback.t;
+ document.getElementById('cd-price').textContent = fallback.p;
+ if (previewCourseButton) previewCourseButton.href = 'lessons.html?class=' + n;
+ count.textContent = 'Loading course syllabus...';
+
+ async function loadStudentCourseSyllabus() {
+   if (typeof supabaseClient === 'undefined') {
+     count.textContent = 'Course information is temporarily unavailable.';
+     syllabus.textContent = 'Please refresh the page later.';
+     return;
+   }
+   try {
+     const { data, error } = await supabaseClient
+       .from('student_course_syllabus')
+       .select('course_id,course_title,class_level,chapter_id,chapter_title,chapter_sort_order,lesson_id,lesson_title,lesson_description,duration_seconds,lesson_sort_order')
+       .eq('class_level', n)
+       .order('chapter_sort_order', { ascending: true })
+       .order('lesson_sort_order', { ascending: true });
+     if (error) throw error;
+     if (!data || data.length === 0) {
+       count.textContent = 'Course syllabus will be available soon.';
+       syllabus.textContent = 'The course is not published yet. Please check back later.';
+       learn.replaceChildren();
+       return;
+     }
+
+     title.textContent = data[0].course_title;
+     const chapters = new Map();
+     data.forEach(row => {
+       if (!chapters.has(row.chapter_id)) {
+         chapters.set(row.chapter_id, {
+           title: row.chapter_title,
+           order: row.chapter_sort_order,
+           lessons: []
+         });
+       }
+       chapters.get(row.chapter_id).lessons.push(row);
+     });
+     const chapterList = [...chapters.values()].sort((a,b) => Number(a.order) - Number(b.order));
+     count.textContent = chapterList.length + ' chapters · ' + data.length + ' lessons';
+
+     syllabus.replaceChildren();
+     chapterList.forEach((chapter, index) => {
+       const details = document.createElement('details');
+       const summary = document.createElement('summary');
+       summary.textContent = 'Chapter ' + (index + 1) + ': ' + chapter.title;
+       const list = document.createElement('ul');
+       chapter.lessons.forEach((lesson, lessonIndex) => {
+         const item = document.createElement('li');
+         item.textContent = 'Lesson ' + (index + 1) + '.' + (lessonIndex + 1) + ' – ' + lesson.lesson_title;
+         if (lesson.lesson_description) item.title = lesson.lesson_description;
+         list.appendChild(item);
+       });
+       details.append(summary, list);
+       syllabus.appendChild(details);
+     });
+
+     learn.replaceChildren();
+     chapterList.slice(0, 6).forEach(chapter => {
+       const item = document.createElement('li');
+       item.textContent = chapter.title + ', explained concept-first';
+       learn.appendChild(item);
+     });
+   } catch (error) {
+     console.error('Student syllabus load failed:', error);
+     count.textContent = 'Could not load course syllabus.';
+     syllabus.textContent = 'Please refresh the page. If the problem continues, contact support.';
+   }
+ }
+ loadStudentCourseSyllabus();
+}
 let cur=0;function sel(i){const all=$$('.rel a');if(!all.length)return;cur=(i+all.length)%all.length;all.forEach(x=>x.classList.remove('on'));const a=all[cur];a.classList.add('on');$('#l-title').textContent=a.dataset.t;$('#l-desc').textContent=a.dataset.d;$('#l-ch').textContent=a.dataset.c}
 $$('.rel a').forEach((a,i)=>a.onclick=e=>{e.preventDefault();sel(i)});
 $('#prev')&&($('#prev').onclick=()=>sel(cur-1));$('#next')&&($('#next').onclick=()=>sel(cur+1));
