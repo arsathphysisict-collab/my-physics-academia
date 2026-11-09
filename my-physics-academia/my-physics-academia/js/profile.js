@@ -54,8 +54,12 @@
         const course = courseNames[row.course_id];
         const card = document.createElement('article');
         card.className = 'profile-course';
-        addText(card, 'h3', '', course.title);
-        addText(card, 'p', 'profile-course-meta', 'Access status: Active');
+
+        const top = document.createElement('div');
+        top.className = 'profile-course-top';
+        addText(top, 'h3', '', course.title);
+        addText(top, 'span', 'profile-status', 'Active access');
+        card.appendChild(top);
 
         let chapterCount = 0;
         let lessonCount = 0;
@@ -73,15 +77,34 @@
           console.warn('Course outline count unavailable:', syllabusError);
         }
 
-        addText(card, 'p', 'profile-course-meta', chapterCount + ' chapters · ' + lessonCount + ' lessons');
-        addText(card, 'p', 'profile-note', 'Learning progress: Not tracked yet');
-        addText(card, 'p', 'profile-note', 'Completion tracking will appear here after lesson progress is connected.');
+        const stats = document.createElement('div');
+        stats.className = 'profile-stats';
+        const chapterStat = document.createElement('div');
+        chapterStat.className = 'profile-stat';
+        addText(chapterStat, 'strong', '', String(chapterCount));
+        addText(chapterStat, 'span', '', 'Chapters');
+        const lessonStat = document.createElement('div');
+        lessonStat.className = 'profile-stat';
+        addText(lessonStat, 'strong', '', String(lessonCount));
+        addText(lessonStat, 'span', '', 'Lessons');
+        stats.append(chapterStat, lessonStat);
+        card.appendChild(stats);
+
+        const progress = document.createElement('div');
+        progress.className = 'profile-progress-panel';
+        addText(progress, 'div', 'profile-progress-title', 'Learning progress');
+        addText(progress, 'p', '', 'Lesson completion tracking will appear here once progress tracking is connected.');
+        card.appendChild(progress);
+
+        const actions = document.createElement('div');
+        actions.className = 'profile-course-actions';
         const link = document.createElement('a');
         link.className = 'btn o';
         link.href = 'student-course.html?class=' + course.level;
         link.textContent = 'Continue Learning';
-        link.style.marginTop = '12px';
-        card.appendChild(link);
+        actions.appendChild(link);
+        card.appendChild(actions);
+
         coursesBox.appendChild(card);
       }
     } catch (error) {
