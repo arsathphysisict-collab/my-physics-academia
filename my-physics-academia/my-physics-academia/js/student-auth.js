@@ -4,12 +4,16 @@
   const statusBox = document.getElementById("student-auth-status");
   const loginTab = document.getElementById("student-show-login");
   const signupTab = document.getElementById("student-show-signup");
+  const tabs = document.getElementById("student-auth-tabs");
+  const sessionPanel = document.getElementById("student-session-panel");
+  const logoutButton = document.getElementById("student-logout-button");
   if (!loginForm || !signupForm || typeof supabaseClient === "undefined") return;
 
   function setStatus(message, isError = false) {
     statusBox.textContent = message;
     statusBox.classList.toggle("error", isError);
   }
+
   function setMode(mode) {
     const isLogin = mode === "login";
     loginForm.hidden = !isLogin;
@@ -20,6 +24,21 @@
     signupTab.setAttribute("aria-pressed", String(!isLogin));
     setStatus(isLogin ? "Enter your student account details." : "Create your student account using your email address.");
   }
+
+  function showSignedIn() {
+    tabs.hidden = true;
+    loginForm.hidden = true;
+    signupForm.hidden = true;
+    sessionPanel.hidden = false;
+    setStatus("You are already signed in. You can continue to your courses or log out.");
+  }
+
+  function showSignedOut() {
+    tabs.hidden = false;
+    sessionPanel.hidden = true;
+    setMode("login");
+  }
+
   function getSafeReturnUrl() {
     const requested = new URLSearchParams(location.search).get("return");
     if (!requested) return "courses.html";
@@ -81,8 +100,8 @@
         setStatus("Student account created. Redirecting...");
         location.assign(getSafeReturnUrl());
       } else {
-        setStatus("Account created. Please check your email and confirm your email address, then return here to log in.");
         setMode("login");
+        setStatus("Account created. Please confirm your email using the link we sent, then log in here.");
       }
     } catch (error) {
       setStatus(error.message || "Could not create the student account.", true);
@@ -91,7 +110,27 @@
     }
   });
 
+  logoutButton.addEventListener("click", async () => {
+    logoutButton.disabled = true;
+    setStatus("Logging out...");
+    try {
+      const { error } = await supabaseClient.auth.signOut();
+      if (error) throw error;
+      showSignedOut();
+      setStatus("You have been logged out. You can now log in or create another account.");
+    } catch (error) {
+      setStatus(error.message || "Logout failed. Please try again.", true);
+    } finally {
+      logoutButton.disabled = false;
+    }
+  });
+
   supabaseClient.auth.getSession().then(({ data, error }) => {
-    if (!error && data.session) setStatus("You are already signed in. Open your course page to continue.");
+    if (error) {
+      setStatus(error.message || "Could not check your login status.", true);
+      return;
+    }
+    if (data.session) showSignedIn();
+    else showSignedOut();
   });
 })();
