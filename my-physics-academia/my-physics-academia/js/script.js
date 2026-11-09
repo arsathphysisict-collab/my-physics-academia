@@ -77,6 +77,32 @@ if($('#course-detail')) {
        hasCourseAccess = false;
      }
 
+     // Load published concept titles only through the access-checked RPC.
+     // The public syllabus view never supplies concept titles or Mux identifiers.
+     const purchasedConceptsByLesson = new Map();
+     let purchasedConceptLoadFailed = false;
+     if (hasCourseAccess) {
+       try {
+         const { data: purchasedConcepts, error: purchasedConceptError } =
+           await supabaseClient.rpc('get_my_course_concepts', {
+             p_course_id: data[0].course_id
+           });
+         if (purchasedConceptError) throw purchasedConceptError;
+         (purchasedConcepts || []).forEach(concept => {
+           if (!purchasedConceptsByLesson.has(concept.lesson_id)) {
+             purchasedConceptsByLesson.set(concept.lesson_id, []);
+           }
+           purchasedConceptsByLesson.get(concept.lesson_id).push({
+             id: concept.concept_id,
+             title: concept.concept_title
+           });
+         });
+       } catch (conceptLoadError) {
+         purchasedConceptLoadFailed = true;
+         console.error('Secure concept list could not be loaded:', conceptLoadError);
+       }
+     }
+
      // Preserve the exact hierarchy: Class → Chapter → Lesson → Concept.
      const chapters = new Map();
      data.forEach(row => {
@@ -128,16 +154,22 @@ if($('#course-detail')) {
          lessonDetails.appendChild(lessonSummary);
 
          if (hasCourseAccess) {
-           const availableConcepts = lesson.concepts.filter(concept => concept.isPublished);
+           const availableConcepts = purchasedConceptsByLesson.get(lesson.id) || [];
            if (availableConcepts.length) {
-             const note = document.createElement('p');
-             note.className = 'sub';
-             note.textContent = 'Your course access is active. The secure concept list is being connected.';
-             lessonDetails.appendChild(note);
+             const conceptList = document.createElement('ul');
+             conceptList.className = 'course-concept-list';
+             availableConcepts.forEach(concept => {
+               const conceptItem = document.createElement('li');
+               conceptItem.textContent = concept.title;
+               conceptList.appendChild(conceptItem);
+             });
+             lessonDetails.appendChild(conceptList);
            } else {
              const note = document.createElement('p');
              note.className = 'sub';
-             note.textContent = 'Concepts for this lesson will be available soon.';
+             note.textContent = purchasedConceptLoadFailed
+               ? 'Concept list is temporarily unavailable. Please refresh the page.'
+               : 'Concepts for this lesson will be available soon.';
              lessonDetails.appendChild(note);
            }
          } else {
