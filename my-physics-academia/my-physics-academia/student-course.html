@@ -14,6 +14,17 @@
 .student-lesson-list{padding:10px 0 0 12px}.student-lesson{border-top:1px solid #edf0f5;padding:14px 4px}.student-lesson>summary{font-weight:600;cursor:pointer}
 .student-concepts{margin:12px 0 0;padding-left:22px}.student-concepts li{padding:5px 0;color:#344054}
 .student-course-message{padding:22px;border:1px dashed #cbd5e1;border-radius:14px;background:#fff;color:#667085}
+.student-video-section{margin:26px 0;padding:22px;background:#fff;border:1px solid #e5eaf3;border-radius:16px;box-shadow:0 6px 20px rgba(12,35,75,.05);scroll-margin-top:20px}
+.student-video-section[hidden]{display:none}
+.student-video-section h2{margin:0 0 8px;color:#102d59}
+.student-video-status{margin:10px 0 0;color:#667085;font-size:.95rem}
+.student-video-status.error{color:#b42318}
+.student-video-frame{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:12px;background:#080d18}
+.student-video-frame mux-player{position:absolute;inset:0;width:100%;height:100%;--media-object-fit:contain}
+.student-concept-button{border:0;background:transparent;padding:5px 0;color:#245ca6;font:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.student-concept-button:hover{color:#102d59}
+.student-concept-button:disabled{opacity:.7;cursor:wait}
+.student-concept-button.active{font-weight:700;color:#102d59}
 .student-course-back{display:inline-block;margin-top:18px}
 </style>
 </head>
@@ -24,11 +35,17 @@
 </nav></div></header>
 <main class="student-course-wrap">
 <section class="student-course-hero"><span class="demo">YOUR COURSE</span><h1 id="student-course-title">Loading course...</h1><p id="student-course-count">Verifying your course access...</p></section>
+<section id="student-video-section" class="student-video-section" aria-live="polite" hidden>
+<h2 id="student-video-title">Course video</h2>
+<div id="student-video-player" class="student-video-frame"></div>
+<p id="student-video-status" class="student-video-status">Select a concept to load its video.</p>
+</section>
 <section class="student-course-content"><div id="student-course-syllabus" aria-live="polite"><div class="student-course-message">Loading your course content...</div></div></section>
 <a class="btn o student-course-back" href="student-home.html">← Back to My Learning</a>
 </main>
 <footer><div class="wrap"><p class="copy">© 2026 My Physics Academia</p></div></footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
 <script src="js/supabase.js"></script><script src="js/student-course.js"></script>
 <script>document.getElementById('burger').addEventListener('click',()=>document.querySelector('.links').classList.toggle('open'));</script>
 </body></html>
