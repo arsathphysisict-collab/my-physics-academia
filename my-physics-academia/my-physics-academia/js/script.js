@@ -43,7 +43,7 @@ if($('#course-detail')) {
    try {
      const { data, error } = await supabaseClient
        .from('student_course_syllabus')
-       .select('course_id,course_title,class_level,chapter_id,chapter_title,chapter_sort_order,lesson_id,lesson_title,lesson_description,duration_seconds,lesson_sort_order,concept_id,concept_title,concept_is_preview,concept_is_published')
+       .select('course_id,course_title,class_level,chapter_id,chapter_title,chapter_sort_order,lesson_id,lesson_title,lesson_description,duration_seconds,lesson_sort_order,concept_id,concept_is_preview,concept_is_published')
        .eq('class_level', n)
        .order('chapter_sort_order', { ascending: true })
        .order('lesson_sort_order', { ascending: true });
@@ -101,7 +101,6 @@ if($('#course-detail')) {
          if (!lesson.concepts.some(item => item.id === row.concept_id)) {
            lesson.concepts.push({
              id: row.concept_id,
-             title: row.concept_title,
              isPreview: row.concept_is_preview === true,
              isPublished: row.concept_is_published === true
            });
@@ -131,21 +130,10 @@ if($('#course-detail')) {
          if (hasCourseAccess) {
            const availableConcepts = lesson.concepts.filter(concept => concept.isPublished);
            if (availableConcepts.length) {
-             const conceptList = document.createElement('ul');
-             conceptList.className = 'course-concept-list';
-             availableConcepts.forEach(concept => {
-               const conceptItem = document.createElement('li');
-               const conceptButton = document.createElement('button');
-               conceptButton.type = 'button';
-               conceptButton.className = 'course-concept-link';
-               conceptButton.textContent = concept.title;
-               conceptButton.addEventListener('click', () => {
-                 modal('Your course access is active. Secure full-course video playback is being connected and will be available in the next step.');
-               });
-               conceptItem.appendChild(conceptButton);
-               conceptList.appendChild(conceptItem);
-             });
-             lessonDetails.appendChild(conceptList);
+             const note = document.createElement('p');
+             note.className = 'sub';
+             note.textContent = 'Your course access is active. The secure concept list is being connected.';
+             lessonDetails.appendChild(note);
            } else {
              const note = document.createElement('p');
              note.className = 'sub';
