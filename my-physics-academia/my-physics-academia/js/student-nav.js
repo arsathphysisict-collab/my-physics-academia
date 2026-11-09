@@ -27,8 +27,8 @@
       const { data, error } = await supabaseClient.auth.getUser();
       if (error) throw error;
       if (data.user) {
-        navLink.textContent = 'Profile';
-        navLink.href = 'profile.html';
+        navLink.textContent = 'My Learning';
+        navLink.href = 'student-home.html';
         navLink.classList.add('btn');
       } else {
         navLink.textContent = 'Student Login';
