@@ -91,48 +91,156 @@
       const player = document.createElement('mux-player');
       player.setAttribute('stream-type', 'on-demand');
       player.setAttribute('playsinline', '');
-      player.setAttribute('controls', '');
+      player.style.position = 'absolute';
+      player.style.inset = '0';
       player.style.width = '100%';
       player.style.height = '100%';
       player.style.display = 'block';
+      player.style.aspectRatio = 'auto';
       player.style.setProperty('--media-object-fit', 'contain');
+      player.style.setProperty('--media-object-position', 'center');
 
-      // Attach the signed token before the playback ID so the first request is authorized.
+      // Use our own clip-relative controls so the original Mux asset duration
+      // and timeline are never exposed to the student.
+      player.controls = false;
+      player.removeAttribute('controls');
+      [
+        '--play-button','--center-controls','--time-range','--time-display',
+        '--duration-display','--mute-button','--volume-range','--fullscreen-button',
+        '--pip-button','--captions-button','--airplay-button','--cast-button',
+        '--playback-rate-button','--seek-backward-button','--seek-forward-button'
+      ].forEach(variable => player.style.setProperty(variable, 'none'));
+
       player.playbackToken = data.token;
       player.tokens = { playback: data.token };
       player.playbackId = data.playbackId;
 
+      const clipDuration = clipEnd === null ? null : clipEnd - clipStart;
       let clipFinished = false;
-      const enforceClipStart = () => {
-        if (player.currentTime < clipStart) player.currentTime = clipStart;
+      const controls = document.createElement('div');
+      controls.style.cssText = "position:absolute;left:0;right:0;bottom:0;z-index:10;display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(transparent,rgba(0,0,0,.86));color:#fff";
+      const controlButtonStyle = "border:0;background:transparent;color:#fff;font-size:18px;cursor:pointer;padding:4px 6px;min-width:30px";
+
+      const playButton = document.createElement('button');
+      playButton.type = 'button';
+      playButton.textContent = '▶';
+      playButton.setAttribute('aria-label', 'Play video');
+      playButton.style.cssText = controlButtonStyle;
+      playButton.addEventListener('click', async () => {
+        try {
+          if (clipFinished || (clipEnd !== null && player.currentTime >= clipEnd - 0.05)) {
+            clipFinished = false;
+            player.currentTime = clipStart;
+          }
+          if (player.paused) await player.play();
+          else player.pause();
+        } catch (_) { showPlayerStatus('Could not play this video. Please try again.', true); }
+      });
+
+      const progress = document.createElement('input');
+      progress.type = 'range';
+      progress.min = '0';
+      progress.max = String(clipDuration || 100);
+      progress.step = '0.1';
+      progress.value = '0';
+      progress.setAttribute('aria-label', 'Video progress');
+      progress.style.cssText = 'flex:1;min-width:40px;width:100%;height:5px;margin:0;padding:0;accent-color:#fff;cursor:pointer';
+      progress.addEventListener('input', () => {
+        if (clipDuration === null) return;
+        player.currentTime = clipStart + Number(progress.value);
+        clipFinished = false;
+      });
+
+      const timeLabel = document.createElement('span');
+      timeLabel.style.cssText = 'font-size:12px;white-space:nowrap;min-width:72px;text-align:center';
+      const formatTime = value => {
+        const seconds = Math.max(0, Math.floor(Number(value) || 0));
+        return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
       };
-      player.addEventListener('loadedmetadata', enforceClipStart);
-      player.addEventListener('canplay', enforceClipStart);
+      const volumeButton = document.createElement('button');
+      volumeButton.type = 'button';
+      volumeButton.textContent = '🔊';
+      volumeButton.setAttribute('aria-label', 'Mute or unmute');
+      volumeButton.style.cssText = controlButtonStyle;
+      volumeButton.addEventListener('click', () => {
+        player.muted = !player.muted;
+        volumeButton.textContent = player.muted ? '🔇' : '🔊';
+      });
+
+      const volume = document.createElement('input');
+      volume.type = 'range';
+      volume.min = '0';
+      volume.max = '1';
+      volume.step = '0.05';
+      volume.value = '1';
+      volume.setAttribute('aria-label', 'Volume');
+      volume.style.cssText = 'width:75px;min-width:55px;height:5px;margin:0;padding:0;accent-color:#fff;cursor:pointer';
+      volume.addEventListener('input', () => {
+        player.volume = Number(volume.value);
+        player.muted = player.volume === 0;
+      });
+
+      const fullscreen = document.createElement('button');
+      fullscreen.type = 'button';
+      fullscreen.textContent = '⛶';
+      fullscreen.setAttribute('aria-label', 'Fullscreen');
+      fullscreen.style.cssText = controlButtonStyle;
+      fullscreen.addEventListener('click', async () => {
+        try {
+          if (!document.fullscreenElement) await playerContainer.requestFullscreen();
+          else await document.exitFullscreen();
+        } catch (_) { showPlayerStatus('Fullscreen is not available in this browser.', true); }
+      });
+
+      controls.append(playButton, progress, timeLabel, volumeButton, volume, fullscreen);
+      player.addEventListener('loadedmetadata', () => {
+        if (player.currentTime < clipStart) player.currentTime = clipStart;
+        if (clipDuration !== null) progress.max = String(clipDuration);
+      });
+      player.addEventListener('canplay', () => {
+        if (player.currentTime < clipStart) player.currentTime = clipStart;
+      });
       player.addEventListener('seeking', () => {
         if (player.currentTime < clipStart) player.currentTime = clipStart;
         if (clipEnd !== null && player.currentTime > clipEnd) player.currentTime = clipEnd;
       });
       player.addEventListener('timeupdate', () => {
+        const elapsed = Math.max(0, player.currentTime - clipStart);
+        if (clipDuration !== null) {
+          progress.value = String(Math.min(clipDuration, elapsed));
+          timeLabel.textContent = formatTime(elapsed) + ' / ' + formatTime(clipDuration);
+        } else {
+          timeLabel.textContent = formatTime(elapsed);
+        }
         if (clipEnd !== null && !clipFinished && player.currentTime >= clipEnd) {
           clipFinished = true;
           player.pause();
           player.currentTime = clipEnd;
+          progress.value = String(clipDuration);
+          playButton.textContent = '▶';
           showPlayerStatus('This lesson video has finished.');
         }
-      });
-      player.addEventListener('error', () => {
-        showPlayerStatus('The video could not be played. Please refresh and try again.', true);
       });
       player.addEventListener('play', () => {
         if (clipEnd !== null && player.currentTime >= clipEnd - 0.05) {
           clipFinished = false;
           player.currentTime = clipStart;
         }
+        playButton.textContent = 'Ⅱ';
+      });
+      player.addEventListener('pause', () => { playButton.textContent = '▶'; });
+      player.addEventListener('volumechange', () => {
+        volume.value = String(player.muted ? 0 : player.volume);
+        volumeButton.textContent = player.muted ? '🔇' : '🔊';
+      });
+      player.addEventListener('error', () => {
+        showPlayerStatus('The video could not be played. Please refresh and try again.', true);
       });
 
-      playerContainer.replaceChildren(player);
+      playerContainer.style.position = 'relative';
+      playerContainer.replaceChildren(player, controls);
       activePlayer = player;
-      showPlayerStatus('Your video is ready. Press Play to start.');
+
     } catch (error) {
       console.error('Paid playback request failed:', error);
       showPlayerStatus(error.message || 'Could not start this video. Please try again.', true);
