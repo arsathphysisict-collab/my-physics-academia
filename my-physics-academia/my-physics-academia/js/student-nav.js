@@ -8,17 +8,10 @@
       document.head.appendChild(script);
     });
   }
+
   async function initStudentNavigation() {
     const nav = document.querySelector('nav.links');
     if (!nav) return;
-    let navLink = document.getElementById('student-nav-link') ||
-      [...nav.querySelectorAll('a')].find(a =>
-        a.textContent.trim() === 'Student Login' || a.textContent.trim() === 'Profile');
-    if (!navLink) {
-      navLink = document.createElement('a');
-      navLink.id = 'student-nav-link';
-      nav.appendChild(navLink);
-    }
     try {
       if (typeof supabaseClient === 'undefined') {
         if (!window.supabase) await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
@@ -26,18 +19,33 @@
       }
       const { data, error } = await supabaseClient.auth.getUser();
       if (error) throw error;
-      if (data.user) {
-        navLink.textContent = 'My Learning';
-        navLink.href = 'student-home.html';
-        navLink.classList.add('btn');
-      } else {
-        navLink.textContent = 'Student Login';
-        navLink.href = 'student-login.html';
-        navLink.classList.remove('btn');
-      }
+      if (!data.user) return;
+
+      const links = [
+        ['My Learning', 'student-home.html'],
+        ['Courses', 'courses.html'],
+        ['Free Resources', 'resources.html'],
+        ['Blog', 'blog.html'],
+        ['About', 'about.html'],
+        ['Contact', 'contact.html'],
+        ['Profile', 'profile.html']
+      ];
+      const currentPage = location.pathname.split('/').pop() || 'index.html';
+      nav.replaceChildren();
+      links.forEach(([label, href]) => {
+        const link = document.createElement('a');
+        link.textContent = label;
+        link.href = href;
+        if (href === currentPage) link.classList.add('on');
+        if (label === 'Profile') link.classList.add('student-profile-link');
+        nav.appendChild(link);
+      });
+      const brand = document.querySelector('header .brand');
+      if (brand) brand.href = 'student-home.html';
     } catch (error) {
       console.error('Student navigation could not be updated:', error);
     }
   }
+
   initStudentNavigation();
 })();
