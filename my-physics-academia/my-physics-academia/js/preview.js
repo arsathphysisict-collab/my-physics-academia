@@ -145,6 +145,21 @@
         listElement.appendChild(createPreviewButton(video, index, watched.has(video.id)));
       });
       showStatus("Choose any available preview lesson. Each preview can be started once in this browser.");
+
+      // If the student selected a specific preview concept from the course syllabus,
+      // open that exact preview automatically when it is available.
+      const requestedConcept = new URLSearchParams(window.location.search).get("concept");
+      if (requestedConcept) {
+        const targetButton = [...listElement.querySelectorAll("[data-preview-id]")]
+          .find(button => button.dataset.previewId === requestedConcept);
+        if (targetButton && !targetButton.disabled) {
+          targetButton.click();
+        } else if (targetButton && targetButton.disabled) {
+          showStatus("You have already used this preview in this browser.");
+        } else {
+          showStatus("This concept is not currently available as a free preview.");
+        }
+      }
     } catch (error) {
       console.error("Preview list load failed:", error);
       showStatus("Could not load preview lessons. Please refresh and try again.", true);
