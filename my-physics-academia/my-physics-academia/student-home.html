@@ -16,11 +16,22 @@
 .learning-card h3{margin:0 0 10px}.learning-card p{color:#667085}.learning-card .btn{display:inline-block;margin-top:12px}
 .learning-empty{padding:24px;border:1px dashed #cbd5e1;border-radius:14px;color:#667085;background:#fff}
 #learning-status{margin-top:16px;color:#667085}
+
+@media(max-width:480px){
+  .learning-wrap{margin:28px auto;padding:0 14px}
+  .learning-welcome{padding:22px 18px}
+  .learning-grid{grid-template-columns:minmax(0,1fr)}
+  .learning-card{min-width:0;padding:18px}
+  .nav{gap:10px}
+  .brand{font-size:clamp(.68rem,2.8vw,.85rem);gap:7px;min-width:0}
+  .brand img{width:32px;flex:0 0 32px}
+  #burger{flex:0 0 auto;padding:4px}
+}
 </style>
 </head>
 <body>
 <header><div class="wrap nav"><a class="brand" href="student-home.html"><img src="images/logo.svg" alt="My Physics Academia logo">MY PHYSICS ACADEMIA</a>
-<button id="burger" aria-label="Open menu">☰</button><nav class="links" aria-label="Student navigation">
+<button id="burger" aria-label="Open menu" aria-controls="student-navigation" aria-expanded="false">☰</button><nav class="links" id="student-navigation" aria-label="Student navigation">
 <a class="on" href="student-home.html">My Learning</a><a href="courses.html">Courses</a><a href="resources.html">Free Resources</a><a href="blog.html">Blog</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="profile.html">Profile</a>
 </nav></div></header>
 <main class="learning-wrap">
@@ -32,4 +43,16 @@
 </main>
 <footer><div class="wrap"><p class="copy">© 2026 My Physics Academia</p></div></footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="js/supabase.js"></script><script src="js/student-home.js"></script>
+<script>
+  const studentMenuButton = document.getElementById('burger');
+  const studentMenu = document.getElementById('student-navigation');
+  studentMenuButton.addEventListener('click', () => {
+    const isOpen = studentMenu.classList.toggle('open');
+    studentMenuButton.setAttribute('aria-expanded', String(isOpen));
+  });
+  studentMenu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+    studentMenu.classList.remove('open');
+    studentMenuButton.setAttribute('aria-expanded', 'false');
+  }));
+</script>
 </body></html>
