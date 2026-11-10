@@ -52,26 +52,10 @@
   }
 
   async function getPostLoginUrl() {
-    const { data: authData, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !authData.user) return "index.html";
-
-    const { data, error } = await supabaseClient
-      .from("student_course_access")
-      .select("course_id")
-      .eq("user_id", authData.user.id)
-      .eq("access_status", "active");
-
-    if (error) {
-      console.error("Could not verify student course access:", error);
-      return "index.html";
-    }
-
-    const validCourseIds = new Set([
-      "0ec687ef-1617-43c1-8777-c56f6ce835e1",
-      "a0678519-b9ae-4845-a979-515107a34cb9"
-    ]);
-    const hasActiveCourse = (data || []).some(row => validCourseIds.has(row.course_id));
-    return hasActiveCourse ? getSafeReturnUrl() : "index.html";
+    // Login success should always lead to the Student Portal. Course access is
+    // checked inside My Learning / the course page, not used to send students
+    // back to the public homepage.
+    return getSafeReturnUrl();
   }
 
   loginTab.addEventListener("click", () => setMode("login"));
