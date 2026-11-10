@@ -20,7 +20,11 @@
       if (error) throw error;
       const courses = (data || []).filter(row => COURSE_NAMES[row.course_id]);
       if (!courses.length) {
-        location.replace('index.html');
+        box.replaceChildren();
+        const empty = document.createElement('p');
+        empty.className = 'learning-empty';
+        empty.textContent = 'No active courses are linked to your account yet. Once your course access is activated, it will appear here.';
+        box.appendChild(empty);
         return;
       }
       box.replaceChildren();
