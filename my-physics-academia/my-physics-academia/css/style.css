@@ -46,3 +46,11 @@ footer{background:var(--navy);color:#b9ccf0;padding:48px 0 20px}footer h3{color:
 
 /* Keep the student-only Profile link hidden until account navigation is ready. */
 .student-profile-link{visibility:hidden}
+
+
+@media(max-width:480px){
+  .nav{gap:10px}
+  .brand{font-size:clamp(.68rem,2.8vw,.85rem);gap:7px;min-width:0}
+  .brand img{width:32px;flex:0 0 32px}
+  #burger{flex:0 0 auto;padding:4px}
+}
