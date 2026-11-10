@@ -14,19 +14,32 @@
 .student-auth-card h1{margin:0 0 8px}.student-auth-card>p{margin:0 0 22px;color:#63718a}
 .student-auth-tabs{display:flex;gap:10px;margin-bottom:22px}
 .student-auth-tabs button{flex:1}
-.student-auth-form[hidden]{display:none!important}\n.student-auth-form label{display:block;font-weight:600;margin:14px 0 6px}
+.student-auth-form[hidden]{display:none!important}
+.student-auth-form label{display:block;font-weight:600;margin:14px 0 6px}
 .student-auth-form input{width:100%;padding:13px 14px;border:1px solid #ccd5e3;border-radius:9px;font:inherit}
 .student-auth-form .btn{width:100%;margin-top:20px;justify-content:center}
 #student-auth-status{margin-top:16px;padding:12px;border-radius:9px;background:#f1f5fb;color:#263b5e;min-height:20px}
 #student-auth-status.error{background:#fff0f0;color:#9a2525}
 .student-auth-foot{margin-top:18px;text-align:center}
+
+@media(max-width:480px){
+  .student-auth-wrap{margin:28px auto;padding:0 14px}
+  .student-auth-card{padding:21px 17px}
+  .student-auth-card h1{font-size:clamp(1.7rem,7vw,2.2rem)}
+  .student-auth-tabs{gap:8px}
+  .student-auth-tabs .btn{padding:10px 12px;font-size:.92rem}
+  .nav{gap:10px}
+  .brand{font-size:clamp(.68rem,2.8vw,.85rem);gap:7px;min-width:0}
+  .brand img{width:32px;flex:0 0 32px}
+  #burger{flex:0 0 auto;padding:4px}
+}
 </style>
 </head>
 <body>
 <header><div class="wrap nav">
 <a class="brand" href="index.html"><img src="images/logo.svg" alt="My Physics Academia logo">MY PHYSICS ACADEMIA</a>
-<button id="burger" aria-label="Open menu">☰</button>
-<nav class="links" aria-label="Main">
+<button id="burger" aria-label="Open menu" aria-controls="student-login-navigation" aria-expanded="false">☰</button>
+<nav class="links" id="student-login-navigation" aria-label="Main">
 <a href="index.html">Home</a><a href="courses.html">Courses</a><a href="resources.html">Free Resources</a><a href="about.html">About</a>
 </nav></div></header>
 <main class="student-auth-wrap">
@@ -68,5 +81,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 <script src="js/student-auth.js"></script>
+<script>
+  const loginMenuButton = document.getElementById('burger');
+  const loginMenu = document.getElementById('student-login-navigation');
+  loginMenuButton.addEventListener('click', () => {
+    const isOpen = loginMenu.classList.toggle('open');
+    loginMenuButton.setAttribute('aria-expanded', String(isOpen));
+  });
+  loginMenu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+    loginMenu.classList.remove('open');
+    loginMenuButton.setAttribute('aria-expanded', 'false');
+  }));
+</script>
 </body>
 </html>
