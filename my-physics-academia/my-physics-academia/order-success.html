@@ -45,7 +45,7 @@
       <p class="demo">ORDER STATUS</p>
       <h1 id="order-title">Thank you for choosing My Physics Academia!</h1>
       <p>Your order journey has started. We will show your course in My Learning once your payment is successfully verified and access is activated.</p>
-      <div class="order-note" role="status">
+      <div class="order-note" id="payment-confirmation" role="status">
         <strong>Payment confirmation:</strong> This page is ready for the checkout integration. Your payment is not confirmed by opening this page.
       </div>
       <div class="order-actions">
@@ -57,5 +57,20 @@
   </main>
 
   <footer><div class="wrap"><p class="copy">© 2026 My Physics Academia. All rights reserved.</p></div></footer>
+  <script>
+    (function () {
+      const raw = sessionStorage.getItem("mpa_verified_payment");
+      if (!raw) return;
+      try {
+        const payment = JSON.parse(raw);
+        if (!payment || typeof payment.course !== "string" || typeof payment.paymentId !== "string") return;
+        const note = document.getElementById("payment-confirmation");
+        if (note) note.textContent = "Payment verified successfully. " + payment.course + " access has been activated. Payment ID: " + payment.paymentId;
+        sessionStorage.removeItem("mpa_verified_payment");
+      } catch (_) {
+        sessionStorage.removeItem("mpa_verified_payment");
+      }
+    })();
+  </script>
 </body>
 </html>
