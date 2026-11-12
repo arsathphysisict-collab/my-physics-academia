@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Razorpay Test Checkout | My Physics Academia</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+.test-wrap{max-width:620px;margin:56px auto;padding:0 18px}
+.test-card{background:#fff;border:1px solid #e5eaf3;border-radius:18px;padding:28px;box-shadow:0 12px 36px rgba(12,35,75,.08)}
+.test-card h1{margin-top:0}.test-note{padding:12px 14px;background:#fff8e6;border:1px solid #f2dfaa;border-radius:10px;color:#694d0b}
+.test-status{margin-top:16px;padding:12px;border-radius:9px;background:#f1f5fb;min-height:22px;overflow-wrap:anywhere}
+.test-status.error{background:#fff0f0;color:#9a2525}
+.test-btn{margin-top:18px;width:100%}
+.test-details{font-size:.92rem;color:#53627a;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<header><div class="wrap nav"><a class="brand" href="index.html"><img src="images/logo.svg" alt="">MY PHYSICS ACADEMIA</a><a class="btn o" href="student-home.html">My Learning</a></div></header>
+<main class="test-wrap">
+<section class="test-card">
+<span class="pill">TEST MODE ONLY</span>
+<h1>Razorpay Test Checkout</h1>
+<p class="test-note"><strong>Testing page:</strong> This page creates a ₹1 Razorpay Test Mode order. It does not use Live API keys, change course access, or verify/grant a course purchase.</p>
+<p id="test-user" class="test-details">Checking student login…</p>
+<button id="start-test-payment" class="btn test-btn" type="button" disabled>Create ₹1 Test Order &amp; Open Checkout</button>
+<div id="test-status" class="test-status" role="status" aria-live="polite">Please wait…</div>
+<p class="test-details">After completing the test checkout, the Razorpay payment ID will appear here. The Test Webhook should then receive the payment.captured event.</p>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+(() => {
+  const button = document.getElementById("start-test-payment");
+  const status = document.getElementById("test-status");
+  const userLabel = document.getElementById("test-user");
+  let currentUser = null;
+
+  function show(message, isError = false) {
+    status.textContent = message;
+    status.classList.toggle("error", isError);
+  }
+
+  async function init() {
+    try {
+      const { data, error } = await supabaseClient.auth.getUser();
+      if (error || !data.user) {
+        userLabel.textContent = "You are not logged in. Please log in with your student account first.";
+        show("Login is required to create a test order.", true);
+        button.disabled = true;
+        return;
+      }
+      currentUser = data.user;
+      userLabel.textContent = "Logged in as: " + (currentUser.email || "student account");
+      button.disabled = false;
+      show("Ready. Click the button to create a ₹1 Test Mode order.");
+    } catch (error) {
+      show(error.message || "Could not check login status.", true);
+    }
+  }
+
+  button.addEventListener("click", async () => {
+    if (!currentUser || button.disabled) return;
+    button.disabled = true;
+    show("Creating a ₹1 Test Mode order…");
+
+    try {
+      const { data: order, error } = await supabaseClient.functions.invoke(
+        "create-test-razorpay-order",
+        { body: { amount: 100, currency: "INR" } }
+      );
+
+      if (error) throw new Error(error.message || "Test order creation failed.");
+      if (!order || order.success !== true || !order.order_id || !order.key_id ||
+          order.amount !== 100 || order.currency !== "INR") {
+        throw new Error((order && order.error) || "Test order response was incomplete.");
+      }
+
+      if (typeof window.Razorpay !== "function") {
+        throw new Error("Razorpay Checkout did not load. Refresh and try again.");
+      }
+
+      show("Test order created: " + order.order_id + ". Opening Razorpay Test Checkout…");
+
+      const checkout = new window.Razorpay({
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "My Physics Academia",
+        description: "₹1 Test Mode Webhook Check",
+        order_id: order.order_id,
+        prefill: { email: currentUser.email || "" },
+        theme: { color: "#2f7bf5" },
+        handler: function (response) {
+          show(
+            "Checkout returned a payment response. Payment ID: " +
+            response.razorpay_payment_id +
+            ". Order ID: " + response.razorpay_order_id +
+            ". Now check razorpay-test-webhook Invocations and Logs. This page does not grant course access."
+          );
+          button.disabled = false;
+        },
+        modal: {
+          ondismiss: function () {
+            show("Checkout was closed. If you completed a payment, check the Test Webhook before attempting another test payment.");
+            button.disabled = false;
+          }
+        }
+      });
+
+      checkout.on("payment.failed", function (response) {
+        const reason = response && response.error && response.error.description
+          ? response.error.description : "Payment was not completed.";
+        show("Test payment failed: " + reason, true);
+        button.disabled = false;
+      });
+
+      checkout.open();
+    } catch (error) {
+      show(error.message || "Could not start Test Checkout.", true);
+      button.disabled = false;
+    }
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>
