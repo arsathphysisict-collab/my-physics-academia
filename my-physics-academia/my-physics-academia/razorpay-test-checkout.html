@@ -94,6 +94,19 @@
         order_id: order.order_id,
         prefill: { email: currentUser.email || "" },
         theme: { color: "#2f7bf5" },
+        // Test Mode webhook check: show only card so no unsupported UPI QR is offered.
+        config: {
+          display: {
+            blocks: {
+              test_card: {
+                name: "Test using Card",
+                instruments: [{ method: "card" }]
+              }
+            },
+            sequence: ["block.test_card"],
+            preferences: { show_default_blocks: false }
+          }
+        },
         handler: function (response) {
           show(
             "Checkout returned a payment response. Payment ID: " +
