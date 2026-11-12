@@ -45,8 +45,8 @@
       <p class="demo">ORDER STATUS</p>
       <h1 id="order-title">Thank you for choosing My Physics Academia!</h1>
       <p>Your order journey has started. We will show your course in My Learning once your payment is successfully verified and access is activated.</p>
-      <div class="order-note" id="payment-confirmation" role="status">
-        <strong>Payment confirmation:</strong> This page is ready for the checkout integration. Your payment is not confirmed by opening this page.
+      <div class="order-note" id="payment-confirmation" role="status" aria-live="polite">
+        <strong>Payment confirmation:</strong> No verified payment details were received in this browser session. Please check My Learning before attempting another payment. If you approved a UPI payment, do not pay again until its status is confirmed.
       </div>
       <div class="order-actions">
         <a class="btn" href="/student-home">Go to My Learning</a>
@@ -61,14 +61,42 @@
     (function () {
       const raw = sessionStorage.getItem("mpa_verified_payment");
       if (!raw) return;
+
       try {
         const payment = JSON.parse(raw);
-        if (!payment || typeof payment.course !== "string" || typeof payment.paymentId !== "string") return;
+        if (!payment ||
+            typeof payment.course !== "string" ||
+            typeof payment.paymentId !== "string" ||
+            !Number.isInteger(payment.amount) ||
+            payment.amount <= 0 ||
+            payment.currency !== "INR") {
+          return;
+        }
+
         const note = document.getElementById("payment-confirmation");
-        if (note) note.textContent = "Payment verified successfully. " + payment.course + " access has been activated. Payment ID: " + payment.paymentId;
-        sessionStorage.removeItem("mpa_verified_payment");
-      } catch (_) {
-        sessionStorage.removeItem("mpa_verified_payment");
+        if (!note) return;
+
+        const heading = document.createElement("strong");
+        heading.textContent = "Payment verified successfully";
+
+        const course = document.createElement("p");
+        course.textContent = "Course: " + payment.course;
+
+        const amount = document.createElement("p");
+        amount.textContent = "Amount: ₹" + (payment.amount / 100).toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+
+        const paymentId = document.createElement("p");
+        paymentId.textContent = "Razorpay Payment ID: " + payment.paymentId;
+
+        const access = document.createElement("p");
+        access.textContent = "Your course access has been activated. You can now open it from My Learning.";
+
+        note.replaceChildren(heading, course, amount, paymentId, access);
+      } catch (error) {
+        console.warn("Could not display verified payment details:", error);
       }
     })();
   </script>
