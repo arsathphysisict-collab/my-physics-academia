@@ -110,7 +110,9 @@
 
             sessionStorage.setItem("mpa_verified_payment", JSON.stringify({
               course: COURSE_NAMES[level],
-              paymentId: verification.payment_id
+              paymentId: verification.payment_id,
+              amount: order.amount,
+              currency: order.currency
             }));
             location.assign("order-success.html");
           } catch (error) {
@@ -127,6 +129,7 @@
             button.style.pointerEvents = "";
             button.removeAttribute("aria-busy");
             button.textContent = originalText;
+            showMessage("Checkout was closed. If you approved a UPI payment, check My Learning before trying again. Do not pay again until the payment status is clear.");
           }
         }
       };
