@@ -17,13 +17,14 @@
 </style>
 </head>
 <body>
-<header><div class="wrap nav"><a class="brand" href="index.html"><img src="images/logo.svg" alt="">MY PHYSICS ACADEMIA</a><a class="btn o" href="student-home.html">My Learning</a></div></header>
+<header><div class="wrap nav"><a class="brand" href="index.html"><img src="images/logo.svg" alt="">MY PHYSICS ACADEMIA</a><a class="btn o" id="test-login-link" href="student-login.html?return=razorpay-test-checkout.html">Student Login</a></div></header>
 <main class="test-wrap">
 <section class="test-card">
 <span class="pill">TEST MODE ONLY</span>
 <h1>Razorpay Test Checkout</h1>
 <p class="test-note"><strong>Testing page:</strong> This page creates a ₹1 Razorpay Test Mode order. It does not use Live API keys, change course access, or verify/grant a course purchase.</p>
 <p id="test-user" class="test-details">Checking student login…</p>
+<p id="test-login-help" class="test-details" hidden>To continue testing, log in with your student account. After login, you will return to this Test Checkout page automatically.</p>
 <label for="test-course"><strong>Select the course to test</strong></label>
 <select id="test-course" class="form-control" style="width:100%;margin-top:8px;padding:12px;border:1px solid #d7deea;border-radius:8px" disabled>
   <option value="">Choose a course</option>
@@ -44,6 +45,8 @@
   const status = document.getElementById("test-status");
   const userLabel = document.getElementById("test-user");
   const courseSelect = document.getElementById("test-course");
+  const loginLink = document.getElementById("test-login-link");
+  const loginHelp = document.getElementById("test-login-help");
   let currentUser = null;
 
   function show(message, isError = false) {
@@ -56,11 +59,16 @@
       const { data, error } = await supabaseClient.auth.getUser();
       if (error || !data.user) {
         userLabel.textContent = "You are not logged in. Please log in with your student account first.";
-        show("Login is required to create a test order.", true);
+        show("Please log in first. After login, you will return here to select Class 11 or Class 12.", true);
+        loginHelp.hidden = false;
+        loginLink.hidden = false;
         button.disabled = true;
+        courseSelect.disabled = true;
         return;
       }
       currentUser = data.user;
+      loginHelp.hidden = true;
+      loginLink.hidden = true;
       userLabel.textContent = "Logged in as: " + (currentUser.email || "student account");
       courseSelect.disabled = false;
       show("Login verified. Select Class 11 or Class 12, then create a ₹1 Test Mode order.");
