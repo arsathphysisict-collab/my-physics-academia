@@ -24,6 +24,12 @@
 <h1>Razorpay Test Checkout</h1>
 <p class="test-note"><strong>Testing page:</strong> This page creates a ₹1 Razorpay Test Mode order. It does not use Live API keys, change course access, or verify/grant a course purchase.</p>
 <p id="test-user" class="test-details">Checking student login…</p>
+<label for="test-course"><strong>Select the course to test</strong></label>
+<select id="test-course" class="form-control" style="width:100%;margin-top:8px;padding:12px;border:1px solid #d7deea;border-radius:8px" disabled>
+  <option value="">Choose a course</option>
+  <option value="0ec687ef-1617-43c1-8777-c56f6ce835e1">Class 11 Physics</option>
+  <option value="a0678519-b9ae-4845-a979-515107a34cb9">Class 12 Physics</option>
+</select>
 <button id="start-test-payment" class="btn test-btn" type="button" disabled>Create ₹1 Test Order &amp; Open Checkout</button>
 <div id="test-status" class="test-status" role="status" aria-live="polite">Please wait…</div>
 <p class="test-details">After completing the test checkout, the Razorpay payment ID will appear here. The Test Webhook should then receive the payment.captured event.</p>
@@ -37,6 +43,7 @@
   const button = document.getElementById("start-test-payment");
   const status = document.getElementById("test-status");
   const userLabel = document.getElementById("test-user");
+  const courseSelect = document.getElementById("test-course");
   let currentUser = null;
 
   function show(message, isError = false) {
@@ -55,8 +62,8 @@
       }
       currentUser = data.user;
       userLabel.textContent = "Logged in as: " + (currentUser.email || "student account");
-      button.disabled = false;
-      show("Ready. Click the button to create a ₹1 Test Mode order.");
+      courseSelect.disabled = false;
+      show("Login verified. Select Class 11 or Class 12, then create a ₹1 Test Mode order.");
     } catch (error) {
       show(error.message || "Could not check login status.", true);
     }
@@ -64,13 +71,19 @@
 
   button.addEventListener("click", async () => {
     if (!currentUser || button.disabled) return;
+    const courseId = courseSelect.value;
+    if (!courseId) {
+      show("Please select Class 11 Physics or Class 12 Physics first.", true);
+      return;
+    }
     button.disabled = true;
-    show("Creating a ₹1 Test Mode order…");
+    courseSelect.disabled = true;
+    show("Creating a ₹1 Test Mode order for the selected course…");
 
     try {
       const { data: order, error } = await supabaseClient.functions.invoke(
         "create-test-razorpay-order",
-        { body: { amount: 100, currency: "INR" } }
+        { body: { course_id: courseId, amount: 100, currency: "INR" } }
       );
 
       if (error) throw new Error(error.message || "Test order creation failed.");
@@ -90,7 +103,7 @@
         amount: order.amount,
         currency: order.currency,
         name: "My Physics Academia",
-        description: "₹1 Test Mode Webhook Check",
+        description: "₹1 Test: " + (courseSelect.options[courseSelect.selectedIndex].text),
         order_id: order.order_id,
         prefill: { email: currentUser.email || "" },
         theme: { color: "#2f7bf5" },
@@ -115,11 +128,13 @@
             ". Now check razorpay-test-webhook Invocations and Logs. This page does not grant course access."
           );
           button.disabled = false;
+          courseSelect.disabled = false;
         },
         modal: {
           ondismiss: function () {
             show("Checkout was closed. If you completed a payment, check the Test Webhook before attempting another test payment.");
             button.disabled = false;
+            courseSelect.disabled = false;
           }
         }
       });
@@ -129,12 +144,14 @@
           ? response.error.description : "Payment was not completed.";
         show("Test payment failed: " + reason, true);
         button.disabled = false;
+        courseSelect.disabled = false;
       });
 
       checkout.open();
     } catch (error) {
       show(error.message || "Could not start Test Checkout.", true);
       button.disabled = false;
+      courseSelect.disabled = false;
     }
   });
 
