@@ -57,46 +57,90 @@
   </main>
 
   <footer><div class="wrap"><p class="copy">© 2026 My Physics Academia. All rights reserved.</p></div></footer>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase.js"></script>
   <script>
-    (function () {
-      const raw = sessionStorage.getItem("mpa_verified_payment");
-      if (!raw) return;
+    (async function () {
+      const note = document.getElementById("payment-confirmation");
+      if (!note) return;
+
+      const COURSE_NAMES = {
+        "0ec687ef-1617-43c1-8777-c56f6ce835e1": "Class 11 Physics",
+        "a0678519-b9ae-4845-a979-515107a34cb9": "Class 12 Physics"
+      };
+
+      function showStatus(title, message) {
+        const heading = document.createElement("strong");
+        heading.textContent = title;
+        const detail = document.createElement("p");
+        detail.textContent = message;
+        note.replaceChildren(heading, detail);
+      }
 
       try {
-        const payment = JSON.parse(raw);
-        if (!payment ||
-            typeof payment.course !== "string" ||
-            typeof payment.paymentId !== "string" ||
-            !Number.isInteger(payment.amount) ||
-            payment.amount <= 0 ||
-            payment.currency !== "INR") {
+        const raw = sessionStorage.getItem("mpa_verified_payment");
+        const payment = raw ? JSON.parse(raw) : null;
+        const courseId = payment && payment.courseId;
+
+        if (!courseId || !COURSE_NAMES[courseId]) {
+          showStatus(
+            "Payment status not confirmed",
+            "No verified course information was found in this browser session. Please open My Learning to check your actual course access. Do not pay again until the payment status is clear."
+          );
           return;
         }
 
-        const note = document.getElementById("payment-confirmation");
-        if (!note) return;
+        const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+        if (authError || !authData.user) {
+          showStatus(
+            "Please sign in to confirm course access",
+            "Your payment confirmation cannot be checked until you sign in. Open My Learning and log in with the account used during checkout."
+          );
+          return;
+        }
+
+        const { data: access, error: accessError } = await supabaseClient
+          .from("student_course_access")
+          .select("id, access_status")
+          .eq("user_id", authData.user.id)
+          .eq("course_id", courseId)
+          .eq("access_status", "active")
+          .maybeSingle();
+
+        if (accessError) {
+          console.error("Course access confirmation failed:", accessError);
+          showStatus(
+            "Payment received — access check pending",
+            "We could not confirm course access right now. Please check My Learning shortly. Do not make another payment."
+          );
+          return;
+        }
+
+        if (!access) {
+          showStatus(
+            "Payment received — access activation pending",
+            "Your account does not yet show active access to this course. Please check My Learning shortly or contact support. Do not make another payment."
+          );
+          return;
+        }
 
         const heading = document.createElement("strong");
-        heading.textContent = "Payment verified successfully";
+        heading.textContent = "Course access confirmed";
 
         const course = document.createElement("p");
-        course.textContent = "Course: " + payment.course;
+        course.textContent = "Course: " + COURSE_NAMES[courseId];
 
-        const amount = document.createElement("p");
-        amount.textContent = "Amount: ₹" + (payment.amount / 100).toLocaleString("en-IN", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        });
+        const accessMessage = document.createElement("p");
+        accessMessage.textContent = "Your course access is active in our database. You can now open it from My Learning.";
 
-        const paymentId = document.createElement("p");
-        paymentId.textContent = "Razorpay Payment ID: " + payment.paymentId;
-
-        const access = document.createElement("p");
-        access.textContent = "Your course access has been activated. You can now open it from My Learning.";
-
-        note.replaceChildren(heading, course, amount, paymentId, access);
+        note.replaceChildren(heading, course, accessMessage);
+        sessionStorage.removeItem("mpa_verified_payment");
       } catch (error) {
-        console.warn("Could not display verified payment details:", error);
+        console.error("Order status confirmation failed:", error);
+        showStatus(
+          "Payment status check unavailable",
+          "Please open My Learning to confirm your course access. Do not make another payment until the status is clear."
+        );
       }
     })();
   </script>
