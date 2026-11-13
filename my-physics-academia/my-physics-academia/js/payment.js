@@ -109,10 +109,7 @@
             }
 
             sessionStorage.setItem("mpa_verified_payment", JSON.stringify({
-              course: COURSE_NAMES[level],
-              paymentId: verification.payment_id,
-              amount: order.amount,
-              currency: order.currency
+              courseId: courseId
             }));
             location.assign("order-success.html");
           } catch (error) {
