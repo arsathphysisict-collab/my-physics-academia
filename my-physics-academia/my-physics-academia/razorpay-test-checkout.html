@@ -71,6 +71,7 @@
       loginLink.hidden = true;
       userLabel.textContent = "Logged in as: " + (currentUser.email || "student account");
       courseSelect.disabled = false;
+      button.disabled = false;
       show("Login verified. Select Class 11 or Class 12, then create a ₹1 Test Mode order.");
     } catch (error) {
       show(error.message || "Could not check login status.", true);
