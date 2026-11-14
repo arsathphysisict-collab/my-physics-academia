@@ -13,7 +13,7 @@
 
   // Test checkout is restricted to the site owner's authenticated account.
   // The same allowlist is enforced independently by both server functions.
-  const TEST_ADMIN_USER_IDS = ["8a146356-21a5-422d-8cf5-818a88ebc8ae"];
+  const TEST_ADMIN_USER_IDS = ["b40d64be-e468-429d-94fe-93aa1c6fb906"];
 
   function showMessage(message) {
     const toast = document.getElementById("toast");
