@@ -78,6 +78,18 @@
       }
 
       try {
+        const testRaw = sessionStorage.getItem("mpa_test_verified_payment");
+        const testPayment = testRaw ? JSON.parse(testRaw) : null;
+        if (testPayment && testPayment.courseId && COURSE_NAMES[testPayment.courseId]) {
+          showStatus(
+            "Razorpay Test Mode payment verified",
+            "Test course: " + COURSE_NAMES[testPayment.courseId] +
+            ". This was a ₹1 test transaction only. No real payment was collected and no live course access was activated."
+          );
+          sessionStorage.removeItem("mpa_test_verified_payment");
+          return;
+        }
+
         const raw = sessionStorage.getItem("mpa_verified_payment");
         const payment = raw ? JSON.parse(raw) : null;
         const courseId = payment && payment.courseId;
