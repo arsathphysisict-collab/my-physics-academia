@@ -62,7 +62,7 @@
       }
 
       const { data: order, error: orderError } =
-        await supabaseClient.functions.invoke("create-razorpay-order", {
+        await supabaseClient.functions.invoke("create-test-razorpay-order", {
           body: { course_id: courseId }
         });
 
@@ -84,10 +84,10 @@
         prefill: { email: authData.user.email || "" },
         theme: { color: "#2f7bf5" },
         handler: async function (response) {
-          showMessage("Payment received. Verifying securely...");
+          showMessage("Test Mode payment submitted. Verifying securely...");
           try {
             const { data: verification, error: verificationError } =
-              await supabaseClient.functions.invoke("verify-razorpay-payment", {
+              await supabaseClient.functions.invoke("verify-test-razorpay-payment", {
                 body: {
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
@@ -101,14 +101,14 @@
                 "Payment verification is still pending."
               ));
             }
-            if (!verification || verification.success !== true ||
+            if (!verification || verification.success !== true || verification.test_mode !== true ||
                 verification.course_id !== courseId ||
                 !verification.payment_id) {
               throw new Error((verification && verification.error) ||
                 "The server did not confirm this payment.");
             }
 
-            sessionStorage.setItem("mpa_verified_payment", JSON.stringify({
+            sessionStorage.setItem("mpa_test_verified_payment", JSON.stringify({
               courseId: courseId
             }));
             location.assign("order-success.html");
