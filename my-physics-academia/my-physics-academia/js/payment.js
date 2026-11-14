@@ -11,6 +11,10 @@
     "12": "Class 12 Physics"
   };
 
+  // Test checkout is restricted to the site owner's authenticated account.
+  // The same allowlist is enforced independently by both server functions.
+  const TEST_ADMIN_USER_IDS = ["8a146356-21a5-422d-8cf5-818a88ebc8ae"];
+
   function showMessage(message) {
     const toast = document.getElementById("toast");
     if (toast) {
@@ -59,6 +63,11 @@
         const returnUrl = encodeURIComponent(location.pathname + location.search);
         location.assign("student-login.html?return=" + returnUrl);
         return;
+      }
+
+      const testModeRequested = new URLSearchParams(location.search).get("mpa_test") === "1";
+      if (!testModeRequested || !TEST_ADMIN_USER_IDS.includes(authData.user.id)) {
+        throw new Error("Course checkout is temporarily unavailable while Live payment credentials are being finalized. Please try again later.");
       }
 
       const { data: order, error: orderError } =
