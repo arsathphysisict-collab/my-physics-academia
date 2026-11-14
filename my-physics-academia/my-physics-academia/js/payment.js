@@ -65,9 +65,10 @@
         return;
       }
 
-      const testModeRequested = new URLSearchParams(location.search).get("mpa_test") === "1";
-      if (!testModeRequested || !TEST_ADMIN_USER_IDS.includes(authData.user.id)) {
-        throw new Error("Course checkout is temporarily unavailable while Live payment credentials are being finalized. Please try again later.");
+      // Keep this browser flow strictly in isolated Test Mode.
+      // The server function independently enforces the same administrator allowlist.
+      if (!TEST_ADMIN_USER_IDS.includes(authData.user.id)) {
+        throw new Error("Test checkout is restricted to the authorized administrator account.");
       }
 
       const { data: order, error: orderError } =
