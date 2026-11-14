@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Private account/admin pages are excluded through noindex meta tags
+# and X-Robots-Tag response headers. Do not block crawling here,
+# so search engines can read those noindex directives.
+
+Sitemap: https://www.myphysicsacademia.in/sitemap.xml
