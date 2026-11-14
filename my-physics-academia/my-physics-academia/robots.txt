@@ -1,8 +1,9 @@
 User-agent: *
 Allow: /
 
-# Private account/admin pages are excluded through noindex meta tags
-# and X-Robots-Tag response headers. Do not block crawling here,
-# so search engines can read those noindex directives.
-
+# Keep private and transactional pages crawlable so search engines can
+# read their noindex directives. They are excluded with page-level robots
+# meta tags and X-Robots-Tag response headers in vercel.json.
+#
+# Public, canonical URLs only are listed in the sitemap.
 Sitemap: https://www.myphysicsacademia.in/sitemap.xml
