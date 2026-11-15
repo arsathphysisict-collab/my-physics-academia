@@ -10,21 +10,29 @@
   gtag('js', new Date());
 </script>
 <!-- GOOGLE ANALYTICS 4 (placeholder, NOT active): add GA4 inside GTM (recommended) or paste the gtag.js snippet here with your real G-XXXXXXXXXX ID. -->
-<link rel="canonical" href="https://www.myphysicsacademia.in/course-details?class=12">
-<script>(function(){var level=new URLSearchParams(window.location.search).get('class')==='11'?'11':'12';var canonical=document.querySelector('link[rel="canonical"]');if(canonical)canonical.href='https://www.myphysicsacademia.in/course-details?class='+level;})();</script>
 <script>
 (function () {
   const classLevel = new URLSearchParams(location.search).get('class') === '11' ? '11' : '12';
   const canonicalUrl = 'https://www.myphysicsacademia.in/course-details?class=' + classLevel;
-  const canonical = document.querySelector('link[rel="canonical"]');
-  const ogUrl = document.querySelector('meta[property="og:url"]');
   const title = 'Class ' + classLevel + ' Physics Course | My Physics Academia';
+  const description = 'Explore the Class ' + classLevel + ' Physics course at My Physics Academia, with structured chapter-wise lessons, explanations and solved numericals.';
+  const canonical = document.createElement('link');
+  canonical.rel = 'canonical';
+  canonical.href = canonicalUrl;
+  document.head.appendChild(canonical);
+  document.title = title;
+  const ogUrl = document.querySelector('meta[property="og:url"]');
   const ogTitle = document.querySelector('meta[property="og:title"]');
+  const ogDescription = document.querySelector('meta[property="og:description"]');
   const twitterTitle = document.querySelector('meta[name="twitter:title"]');
-  if (canonical) canonical.href = canonicalUrl;
+  const twitterDescription = document.querySelector('meta[name="twitter:description"]');
+  const metaDescription = document.querySelector('meta[name="description"]');
   if (ogUrl) ogUrl.content = canonicalUrl;
   if (ogTitle) ogTitle.content = title;
+  if (ogDescription) ogDescription.content = description;
   if (twitterTitle) twitterTitle.content = title;
+  if (twitterDescription) twitterDescription.content = description;
+  if (metaDescription) metaDescription.content = description;
 })();
 </script>
 </head><body>
