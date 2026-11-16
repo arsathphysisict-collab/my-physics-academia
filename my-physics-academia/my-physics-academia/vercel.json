@@ -166,5 +166,31 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/course-details",
+      "has": [
+        {
+          "type": "query",
+          "key": "class",
+          "value": "11"
+        }
+      ],
+      "destination": "/class-11-physics-course",
+      "permanent": true
+    },
+    {
+      "source": "/course-details",
+      "has": [
+        {
+          "type": "query",
+          "key": "class",
+          "value": "12"
+        }
+      ],
+      "destination": "/class-12-physics-course",
+      "permanent": true
+    }
   ]
 }
