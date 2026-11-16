@@ -20,7 +20,7 @@ const COURSES={
  11:{t:'Class 11 Physics',p:'₹2,999',ch:['Units and Measurements','Motion in a Straight Line','Motion in a Plane','Laws of Motion','Work, Energy and Power','System of Particles and Rotational Motion','Gravitation','Mechanical Properties of Solids','Mechanical Properties of Fluids','Thermal Properties of Matter','Thermodynamics','Kinetic Theory','Oscillations','Waves']},
  12:{t:'Class 12 Physics',p:'₹3,499',ch:['Electric Charges and Fields','Electrostatic Potential and Capacitance','Current Electricity','Moving Charges and Magnetism','Magnetism and Matter','Electromagnetic Induction','Alternating Current','Electromagnetic Waves','Ray Optics','Wave Optics','Dual Nature of Radiation and Matter','Atoms','Nuclei','Semiconductor Electronics']}};
 if($('#course-detail')) {
- const n = new URLSearchParams(location.search).get('class') === '11' ? 11 : 12;
+ const pageClass = Number(document.documentElement.dataset.classLevel);\n const n = pageClass === 11 ? 11 : (new URLSearchParams(location.search).get('class') === '11' ? 11 : 12);
  const fallback = COURSES[n];
  const title = document.getElementById('cd-title');
  const count = document.getElementById('cd-count');
@@ -32,7 +32,7 @@ if($('#course-detail')) {
  title.textContent = fallback.t;
  document.getElementById('cd-price').textContent = fallback.p;
  if (previewCourseButton) previewCourseButton.href = 'lessons.html?class=' + n;
- count.textContent = 'Loading course syllabus...';
+ // Keep the complete server-rendered chapter list visible while live lesson data loads.
 
  async function loadStudentCourseSyllabus() {
    if (typeof supabaseClient === 'undefined') {
