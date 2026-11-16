@@ -773,7 +773,7 @@ if (addLessonForm) {
 $$('.tabs button').forEach(b=>b.addEventListener('click',()=>{$$('.tabs button').forEach(x=>x.classList.remove('on'));$$('.pane').forEach(x=>x.classList.remove('on'));b.classList.add('on');const pane=document.getElementById(b.dataset.pane);if(pane)pane.classList.add('on');}));
 $$('.drop').forEach(dz=>{['dragover','dragenter'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.add('hot')}));['dragleave','drop'].forEach(v=>dz.addEventListener(v,e=>{e.preventDefault();dz.classList.remove('hot');if(v==='drop')toast('Demo only: file not uploaded')}))});
 $$('form').forEach(f => {
-    if (!['admin-login-form', 'add-course-form', 'add-lesson-form', 'mux-asset-upload-form', 'asset-concept-form'].includes(f.id)) {
+    if (!['admin-login-form', 'add-course-form', 'add-lesson-form', 'mux-asset-upload-form', 'asset-concept-form', 'resource-form', 'blog-form'].includes(f.id)) {
         f.onsubmit = e => {
             e.preventDefault();
             toast('Demo only: nothing was submitted');
