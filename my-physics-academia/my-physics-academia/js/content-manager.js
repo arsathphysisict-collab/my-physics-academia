@@ -24,7 +24,7 @@
  if($('blog-slug'))$('blog-slug').addEventListener('input',()=>{$('blog-slug').dataset.touched='1';});
  document.querySelectorAll('[data-editor-command]').forEach(b=>b.addEventListener('click',()=>{ $('blog-editor').focus();document.execCommand(b.dataset.editorCommand,false,b.dataset.editorValue||null);}));
  if($('blog-link'))$('blog-link').onclick=()=>{const url=prompt('Enter the full https:// link');if(url&&/^https:\/\//i.test(url)){ $('blog-editor').focus();document.execCommand('createLink',false,url);}};
- if($('blog-equation'))$('blog-equation').onclick=()=>{const latex=prompt('Enter the equation in LaTeX format (example: F = ma)');if(latex){$('blog-editor').focus();document.execCommand('insertText',false,'\\\\('+latex+'\\\\)');}};
+ if($('blog-equation'))$('blog-equation').onclick=()=>{const latex=prompt('Enter the equation in LaTeX format (example: F = ma)');if(latex){$('blog-editor').focus();document.execCommand('insertText',false,'\\('+latex+'\\)');}};
  if($('blog-image-button'))$('blog-image-button').onclick=()=>$('blog-image-file').click();
  if($('blog-image-file'))$('blog-image-file').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Choose a JPG, PNG or WEBP image.');const path=await upload(file,'blog-images');const url=publicUrl(path);$('blog-editor').focus();document.execCommand('insertHTML',false,'<img src="'+url+'" alt="'+escape(file.name)+'" style="max-width:100%">');}catch(err){$('blog-error').textContent=err.message;}finally{e.target.value='';}});
  if($('blog-save-draft'))$('blog-save-draft').onclick=()=>savePost('draft');
